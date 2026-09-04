@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
+import * as XLSX from 'xlsx';
 
 export default function AHTMonitoringAdmin() {
   const [logs, setLogs] = useState([]);
@@ -95,23 +96,29 @@ export default function AHTMonitoringAdmin() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
-  // Export filtered logs to CSV
-  const handleExportCSV = () => {
+  // Export filtered logs to a real .xlsx Excel file
+  const handleExportExcel = () => {
     if (filteredLogs.length === 0) return;
 
-    const headers = ['No.,EID,Name,Input,Start Time,End Time,AHT,Created At\n'];
-    const rows = filteredLogs.map(log => 
-      `"${log.number}","${log.eid}","${log.name}","${log.input.replace(/"/g, '""')}","${log.start_time}","${log.end_time}","${log.aht}","${log.created_at}"`
-    );
+    // Map filtered records into clean objects for spreadsheet columns
+    const dataToExport = filteredLogs.map(log => ({
+      'No.': log.number,
+      'EID': log.eid,
+      'Name': log.name,
+      'Input': log.input,
+      'Start Time': log.start_time,
+      'End Time': log.end_time,
+      'AHT': log.aht,
+      'Created At': log.created_at
+    }));
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + headers.concat(rows).join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `aht_admin_logs_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create worksheet and workbook structure
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'AHT Logs');
+
+    // Trigger file download
+    XLSX.writeFile(workbook, `aht_admin_logs_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
@@ -124,7 +131,7 @@ export default function AHTMonitoringAdmin() {
         </h3>
 
         <button 
-          onClick={handleExportCSV}
+          onClick={handleExportExcel}
           disabled={filteredLogs.length === 0}
           style={{ 
             padding: '9px 16px', 
@@ -140,7 +147,7 @@ export default function AHTMonitoringAdmin() {
             gap: '6px'
           }}
         >
-          <Download size={15} /> Export CSV
+          <Download size={15} /> Export Excel
         </button>
       </div>
 

@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Users, Trash2, Loader2, Shield, User } from 'lucide-react';
+import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function ManageUser() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Edit Modal States
+  const [editingUser, setEditingUser] = useState(null);
+  const [editEid, setEditEid] = useState('');
+  const [editEmployeeName, setEditEmployeeName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editRole, setEditRole] = useState('employee');
+  const [saving, setSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -38,70 +48,125 @@ export default function ManageUser() {
     }
   };
 
+  const handleOpenEdit = (user) => {
+    setEditingUser(user);
+    setEditEid(user.eid || '');
+    setEditEmployeeName(user.employee_name || '');
+    setEditPassword(user.password || '');
+    setEditRole(user.role || 'employee');
+    setSuccessMessage('');
+    setErrorMessage('');
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    try {
+      const { error } = await supabase
+        .from('app_users')
+        .update({
+          eid: editEid.trim(),
+          employee_name: editEmployeeName.trim(),
+          password: editPassword.trim(),
+          role: editRole
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      setSuccessMessage('User profile updated successfully!');
+      fetchUsers();
+      
+      setTimeout(() => {
+        setEditingUser(null);
+      }, 1200);
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to update user.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', width: '100%' }}>
         <Loader2 size={32} className="animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1000px' }}>
-      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
-        <div style={{ padding: '24px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', background: '#eff6ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
-            <Users size={20} />
+    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.05)' }}>
+        
+        {/* Header */}
+        <div style={{ padding: '28px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)' }}>
+            <Users size={24} />
           </div>
           <div>
-            <h2 style={{ margin: '0 0 2px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Manage Users</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>View and maintain all active workspace & tool user accounts</p>
+            <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.02em' }}>Manage Users</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '500' }}>View and maintain all active workspace & tool user accounts</p>
           </div>
         </div>
 
+        {/* Table */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
-                <th style={{ padding: '14px 20px' }}>Employee Name</th>
-                <th style={{ padding: '14px 20px' }}>EID</th>
-                <th style={{ padding: '14px 20px' }}>Role</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <th style={{ padding: '16px 28px' }}>Employee Name</th>
+                <th style={{ padding: '16px 28px' }}>EID</th>
+                <th style={{ padding: '16px 28px' }}>Role</th>
+                <th style={{ padding: '16px 28px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '16px 20px', fontWeight: '600', color: '#0f172a' }}>
+                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                  <td style={{ padding: '18px 28px', fontWeight: '600', color: '#0f172a' }}>
                     {u.employee_name || 'N/A'}
                   </td>
-                  <td style={{ padding: '16px 20px', color: '#64748b', fontFamily: 'monospace' }}>
+                  <td style={{ padding: '18px 28px', color: '#64748b', fontFamily: 'monospace', fontWeight: '600' }}>
                     {u.eid}
                   </td>
-                  <td style={{ padding: '16px 20px' }}>
+                  <td style={{ padding: '18px 28px' }}>
                     <span style={{ 
                       display: 'inline-flex', 
                       alignItems: 'center', 
-                      gap: '4px', 
-                      padding: '4px 10px', 
+                      gap: '6px', 
+                      padding: '5px 12px', 
                       borderRadius: '20px', 
                       fontSize: '11px', 
                       fontWeight: '700',
-                      background: u.role === 'admin' ? '#eff6ff' : '#f1f5f9',
-                      color: u.role === 'admin' ? '#2563eb' : '#475569'
+                      background: u.role === 'admin' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(241, 245, 249, 1)',
+                      color: u.role === 'admin' ? '#2563eb' : '#475569',
+                      border: u.role === 'admin' ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid #e2e8f0'
                     }}>
                       {u.role === 'admin' ? <Shield size={12} /> : <User size={12} />}
                       <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
                     </span>
                   </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                    <button 
-                      onClick={() => handleDelete(u.id)}
-                      style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}
-                    >
-                      <Trash2 size={14} />
-                      <span>Delete</span>
-                    </button>
+                  <td style={{ padding: '18px 28px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button 
+                        onClick={() => handleOpenEdit(u)}
+                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                      >
+                        <Edit3 size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(u.id)}
+                        style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -109,6 +174,147 @@ export default function ManageUser() {
           </table>
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+          }}>
+            {/* Modal Header */}
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', background: '#eff6ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: '0 0 2px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Edit User Profile</h3>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Modify credentials for {editingUser.employee_name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingUser(null)}
+                style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleUpdateUser} style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {successMessage && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
+                  <CheckCircle2 size={18} />
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
+              {errorMessage && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
+                  <AlertCircle size={18} />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Employee ID (EID)
+                </label>
+                <input 
+                  type="text" 
+                  value={editEid} 
+                  onChange={(e) => setEditEid(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Employee Full Name
+                </label>
+                <input 
+                  type="text" 
+                  value={editEmployeeName} 
+                  onChange={(e) => setEditEmployeeName(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Password
+                </label>
+                <input 
+                  type="text" 
+                  value={editPassword} 
+                  onChange={(e) => setEditPassword(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Access Role
+                </label>
+                <select 
+                  value={editRole} 
+                  onChange={(e) => setEditRole(e.target.value)}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', background: '#ffffff', outline: 'none' }}
+                >
+                  <option value="employee">Employee</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '600', color: '#475569', cursor: 'pointer', fontSize: '14px' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={saving}
+                  style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}
+                >
+                  {saving && <Loader2 size={16} className="animate-spin" />}
+                  <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
