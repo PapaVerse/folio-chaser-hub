@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
@@ -13,6 +13,12 @@ export default function AHTMonitoringAdmin() {
   const [filterEid, setFilterEid] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Selection & Deletion States
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [targetDeleteLog, setTargetDeleteLog] = useState(null); // null means bulk delete, object means single delete
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchAllLogs();
@@ -29,6 +35,7 @@ export default function AHTMonitoringAdmin() {
       console.error('Error fetching all AHT logs for admin:', error);
     } else if (data) {
       const formattedLogs = data.map((item, index) => ({
+        id: item.id, // Ensure your table has an 'id' primary key column
         number: data.length - index,
         eid: item.eid,
         name: item.name,
@@ -42,6 +49,7 @@ export default function AHTMonitoringAdmin() {
       setLogs(formattedLogs);
     }
     setLoading(false);
+    setSelectedIds([]);
   };
 
   // Extract unique employees for the EID dropdown filter
@@ -96,11 +104,73 @@ export default function AHTMonitoringAdmin() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
+  // Selection Handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allPaginatedIds = paginatedLogs.map(l => l.id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...allPaginatedIds])));
+    } else {
+      const paginatedIdsSet = new Set(paginatedLogs.map(l => l.id));
+      setSelectedIds(prev => prev.filter(id => !paginatedIdsSet.has(id)));
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const isAllPaginatedSelected = paginatedLogs.length > 0 && paginatedLogs.every(l => selectedIds.includes(l.id));
+
+  // Deletion Actions
+  const openSingleDeleteModal = (log) => {
+    setTargetDeleteLog(log);
+    setDeleteModalOpen(true);
+  };
+
+  const openBulkDeleteModal = () => {
+    if (selectedIds.length === 0) return;
+    setTargetDeleteLog(null);
+    setDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    setDeleting(true);
+    try {
+      if (targetDeleteLog) {
+        // Single delete
+        const { error } = await supabase
+          .from('aht_logs')
+          .delete()
+          .eq('id', targetDeleteLog.id);
+
+        if (error) throw error;
+      } else {
+        // Bulk delete
+        const { error } = await supabase
+          .from('aht_logs')
+          .delete()
+          .in('id', selectedIds);
+
+        if (error) throw error;
+      }
+
+      await fetchAllLogs();
+      setDeleteModalOpen(false);
+      setTargetDeleteLog(null);
+    } catch (err) {
+      console.error('Error deleting logs:', err);
+      alert('Failed to delete logs. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Export filtered logs to a real .xlsx Excel file
   const handleExportExcel = () => {
     if (filteredLogs.length === 0) return;
 
-    // Map filtered records into clean objects for spreadsheet columns
     const dataToExport = filteredLogs.map(log => ({
       'No.': log.number,
       'EID': log.eid,
@@ -112,12 +182,9 @@ export default function AHTMonitoringAdmin() {
       'Created At': log.created_at
     }));
 
-    // Create worksheet and workbook structure
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'AHT Logs');
-
-    // Trigger file download
     XLSX.writeFile(workbook, `aht_admin_logs_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
@@ -130,25 +197,49 @@ export default function AHTMonitoringAdmin() {
           <Clock size={20} color="#2563eb" /> All Employee AHT Monitoring (Admin View)
         </h3>
 
-        <button 
-          onClick={handleExportExcel}
-          disabled={filteredLogs.length === 0}
-          style={{ 
-            padding: '9px 16px', 
-            background: filteredLogs.length === 0 ? '#94a3b8' : '#10b981', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '8px', 
-            fontWeight: '600', 
-            fontSize: '13px', 
-            cursor: filteredLogs.length === 0 ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <Download size={15} /> Export Excel
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={openBulkDeleteModal}
+              style={{
+                padding: '9px 16px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'background 0.2s'
+              }}
+            >
+              <Trash2 size={15} /> Delete Selected ({selectedIds.length})
+            </button>
+          )}
+
+          <button 
+            onClick={handleExportExcel}
+            disabled={filteredLogs.length === 0}
+            style={{ 
+              padding: '9px 16px', 
+              background: filteredLogs.length === 0 ? '#94a3b8' : '#10b981', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontWeight: '600', 
+              fontSize: '13px', 
+              cursor: filteredLogs.length === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Download size={15} /> Export Excel
+          </button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}
@@ -241,9 +332,17 @@ export default function AHTMonitoringAdmin() {
 
       {/* Scrollable Table Container */}
       <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '750px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '820px' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
             <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+              <th style={{ padding: '12px 16px', background: '#f8fafc', width: '40px', textAlign: 'center' }}>
+                <input 
+                  type="checkbox"
+                  checked={isAllPaginatedSelected}
+                  onChange={handleSelectAll}
+                  style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                />
+              </th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>No.</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>EID</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Name</th>
@@ -252,36 +351,68 @@ export default function AHTMonitoringAdmin() {
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>End Time</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>AHT</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Created At</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
                   Loading enterprise records...
                 </td>
               </tr>
             ) : paginatedLogs.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                   {logs.length === 0 
                     ? 'No tracking activity logged across any employee accounts yet.' 
                     : 'No system logs match your selected filter criteria.'}
                 </td>
               </tr>
             ) : (
-              paginatedLogs.map((log, index) => (
-                <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
-                  <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
-                  <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
-                  <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
-                  <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
-                  <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>
-                  <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>{log.created_at}</td>
-                </tr>
-              ))
+              paginatedLogs.map((log) => {
+                const isSelected = selectedIds.includes(log.id);
+                return (
+                  <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0fdf4' : 'transparent', transition: 'background 0.15s' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <input 
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleSelectOne(log.id)}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>
+                    <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>{log.created_at}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      <button 
+                        onClick={() => openSingleDeleteModal(log)}
+                        style={{ 
+                          background: '#fef2f2', 
+                          border: '1px solid #fecaca', 
+                          color: '#dc2626', 
+                          padding: '6px 10px', 
+                          borderRadius: '6px', 
+                          cursor: 'pointer', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '4px', 
+                          fontSize: '12px', 
+                          fontWeight: '600' 
+                        }}
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -353,6 +484,109 @@ export default function AHTMonitoringAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Modern Deletion Confirmation Modal */}
+      {deleteModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+            padding: '30px 24px'
+          }}>
+            <div style={{ 
+              width: '54px', 
+              height: '54px', 
+              background: '#fef2f2', 
+              color: '#dc2626', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 18px auto',
+              border: '1px solid #fecaca'
+            }}>
+              <AlertTriangle size={26} />
+            </div>
+
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+              {targetDeleteLog ? 'Delete AHT Log Entry?' : `Delete ${selectedIds.length} Selected Records?`}
+            </h3>
+
+            <p style={{ margin: '0 0 24px 0', fontSize: '13.5px', color: '#64748b', lineHeight: '1.5' }}>
+              {targetDeleteLog 
+                ? `You are about to remove the tracking record for ${targetDeleteLog.name} (${targetDeleteLog.eid}). This action cannot be undone.`
+                : `You are about to delete ${selectedIds.length} checked AHT monitoring logs permanently from the database. This action cannot be undone.`
+              }
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleting}
+                style={{ 
+                  flex: 1, 
+                  padding: '11px', 
+                  background: '#f1f5f9', 
+                  border: '1px solid #cbd5e1', 
+                  borderRadius: '10px', 
+                  fontWeight: '600', 
+                  color: '#475569', 
+                  cursor: 'pointer', 
+                  fontSize: '14px' 
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={executeDelete} 
+                disabled={deleting}
+                style={{ 
+                  flex: 1, 
+                  padding: '11px', 
+                  background: '#dc2626', 
+                  color: '#ffffff', 
+                  border: 'none', 
+                  borderRadius: '10px', 
+                  fontWeight: '600', 
+                  cursor: deleting ? 'not-allowed' : 'pointer', 
+                  fontSize: '14px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '8px', 
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)' 
+                }}
+              >
+                {deleting && <Loader2 size={16} className="animate-spin" />}
+                <span>{deleting ? 'Deleting...' : 'Yes, Delete'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
