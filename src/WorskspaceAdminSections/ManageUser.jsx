@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter } from 'lucide-react';
 
 export default function ManageUser() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter States
+  const [selectedDepartment, setSelectedDepartment] = useState('ALL');
+  const [selectedCluster, setSelectedCluster] = useState('ALL');
   
   // Edit Modal States
   const [editingUser, setEditingUser] = useState(null);
@@ -12,6 +16,8 @@ export default function ManageUser() {
   const [editEmployeeName, setEditEmployeeName] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editRole, setEditRole] = useState('employee');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editCluster, setEditCluster] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -54,6 +60,8 @@ export default function ManageUser() {
     setEditEmployeeName(user.employee_name || '');
     setEditPassword(user.password || '');
     setEditRole(user.role || 'employee');
+    setEditDepartment(user.department || '');
+    setEditCluster(user.cluster || '');
     setSuccessMessage('');
     setErrorMessage('');
   };
@@ -71,7 +79,9 @@ export default function ManageUser() {
           eid: editEid.trim(),
           employee_name: editEmployeeName.trim(),
           password: editPassword.trim(),
-          role: editRole
+          role: editRole,
+          department: editDepartment.trim(),
+          cluster: editCluster.trim()
         })
         .eq('id', editingUser.id);
 
@@ -90,6 +100,17 @@ export default function ManageUser() {
     }
   };
 
+  // Derive unique department and cluster options from the users list
+  const departments = ['ALL', ...new Set(users.map(u => u.department).filter(Boolean))];
+  const clusters = ['ALL', ...new Set(users.map(u => u.cluster).filter(Boolean))];
+
+  // Filter users based on selected department and cluster
+  const filteredUsers = users.filter(u => {
+    const matchesDept = selectedDepartment === 'ALL' || u.department === selectedDepartment;
+    const matchesCluster = selectedCluster === 'ALL' || u.cluster === selectedCluster;
+    return matchesDept && matchesCluster;
+  });
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', width: '100%' }}>
@@ -103,14 +124,62 @@ export default function ManageUser() {
       <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.05)' }}>
         
         {/* Header */}
-        <div style={{ padding: '28px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)' }}>
-            <Users size={24} />
+        <div style={{ padding: '28px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)' }}>
+              <Users size={24} />
+            </div>
+            <div>
+              <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                Manage Users ({filteredUsers.length} of {users.length})
+              </h2>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '500' }}>View and maintain all active workspace & tool user accounts</p>
+            </div>
           </div>
-          <div>
-            <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.02em' }}>Manage Users</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '500' }}>View and maintain all active workspace & tool user accounts</p>
+        </div>
+
+        {/* Filter Controls Bar */}
+        <div style={{ background: '#f8fafc', padding: '16px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <Filter size={16} color="#2563eb" />
+            <span>Filter By:</span>
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '220px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Department:</label>
+            <select 
+              value={selectedDepartment} 
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#1e293b', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+            >
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>{dept === 'ALL' ? 'All Departments' : dept}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '220px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Cluster:</label>
+            <select 
+              value={selectedCluster} 
+              onChange={(e) => setSelectedCluster(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#1e293b', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+            >
+              {clusters.map((cluster) => (
+                <option key={cluster} value={cluster}>{cluster === 'ALL' ? 'All Clusters' : cluster}</option>
+              ))}
+            </select>
+          </div>
+
+          {(selectedDepartment !== 'ALL' || selectedCluster !== 'ALL') && (
+            <button 
+              type="button"
+              onClick={() => { setSelectedDepartment('ALL'); setSelectedCluster('ALL'); }}
+              style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#334155' }}
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
 
         {/* Table */}
@@ -118,58 +187,74 @@ export default function ManageUser() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '16px 28px' }}>Employee Name</th>
-                <th style={{ padding: '16px 28px' }}>EID</th>
-                <th style={{ padding: '16px 28px' }}>Role</th>
-                <th style={{ padding: '16px 28px', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '16px 24px' }}>Employee Name</th>
+                <th style={{ padding: '16px 24px' }}>EID</th>
+                <th style={{ padding: '16px 24px' }}>Department</th>
+                <th style={{ padding: '16px 24px' }}>Cluster</th>
+                <th style={{ padding: '16px 24px' }}>Role</th>
+                <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                  <td style={{ padding: '18px 28px', fontWeight: '600', color: '#0f172a' }}>
-                    {u.employee_name || 'N/A'}
-                  </td>
-                  <td style={{ padding: '18px 28px', color: '#64748b', fontFamily: 'monospace', fontWeight: '600' }}>
-                    {u.eid}
-                  </td>
-                  <td style={{ padding: '18px 28px' }}>
-                    <span style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '6px', 
-                      padding: '5px 12px', 
-                      borderRadius: '20px', 
-                      fontSize: '11px', 
-                      fontWeight: '700',
-                      background: u.role === 'admin' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(241, 245, 249, 1)',
-                      color: u.role === 'admin' ? '#2563eb' : '#475569',
-                      border: u.role === 'admin' ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid #e2e8f0'
-                    }}>
-                      {u.role === 'admin' ? <Shield size={12} /> : <User size={12} />}
-                      <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
-                    </span>
-                  </td>
-                  <td style={{ padding: '18px 28px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleOpenEdit(u)}
-                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
-                      >
-                        <Edit3 size={14} />
-                        <span>Edit</span>
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(u.id)}
-                        style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
-                      >
-                        <Trash2 size={14} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                    No users found matching the selected filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredUsers.map((u) => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '18px 24px', fontWeight: '600', color: '#0f172a' }}>
+                      {u.employee_name || 'N/A'}
+                    </td>
+                    <td style={{ padding: '18px 24px', color: '#64748b', fontFamily: 'monospace', fontWeight: '600' }}>
+                      {u.eid}
+                    </td>
+                    <td style={{ padding: '18px 24px', color: '#475569', fontWeight: '500' }}>
+                      {u.department || '—'}
+                    </td>
+                    <td style={{ padding: '18px 24px', color: '#475569', fontWeight: '500' }}>
+                      {u.cluster || '—'}
+                    </td>
+                    <td style={{ padding: '18px 24px' }}>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        padding: '5px 12px', 
+                        borderRadius: '20px', 
+                        fontSize: '11px', 
+                        fontWeight: '700',
+                        background: u.role === 'admin' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(241, 245, 249, 1)',
+                        color: u.role === 'admin' ? '#2563eb' : '#475569',
+                        border: u.role === 'admin' ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid #e2e8f0'
+                      }}>
+                        {u.role === 'admin' ? <Shield size={12} /> : <User size={12} />}
+                        <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
+                      </span>
+                    </td>
+                    <td style={{ padding: '18px 24px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button 
+                          onClick={() => handleOpenEdit(u)}
+                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                        >
+                          <Edit3 size={14} />
+                          <span>Edit</span>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(u.id)}
+                          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -195,10 +280,11 @@ export default function ManageUser() {
             background: '#ffffff',
             borderRadius: '20px',
             width: '100%',
-            maxWidth: '500px',
+            maxWidth: '520px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
             border: '1px solid #e2e8f0',
-            overflow: 'hidden',
             boxSizing: 'border-box'
           }}>
             {/* Modal Header */}
@@ -223,7 +309,7 @@ export default function ManageUser() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleUpdateUser} style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form onSubmit={handleUpdateUser} style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
               
               {successMessage && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
@@ -278,6 +364,34 @@ export default function ManageUser() {
                 />
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Department
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editDepartment} 
+                    onChange={(e) => setEditDepartment(e.target.value)} 
+                    placeholder="e.g., Operations" 
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Cluster
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editCluster} 
+                    onChange={(e) => setEditCluster(e.target.value)} 
+                    placeholder="e.g., Cluster A" 
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Access Role
@@ -285,14 +399,14 @@ export default function ManageUser() {
                 <select 
                   value={editRole} 
                   onChange={(e) => setEditRole(e.target.value)}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', background: '#ffffff', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', background: '#ffffff', outline: 'none', cursor: 'pointer' }}
                 >
                   <option value="employee">Employee</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}

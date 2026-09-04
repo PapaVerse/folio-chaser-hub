@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, CheckCircle2, Building, Layers } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
@@ -11,6 +11,8 @@ export default function AHTMonitoringAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [filterEid, setFilterEid] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterCluster, setFilterCluster] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
 
@@ -39,6 +41,8 @@ export default function AHTMonitoringAdmin() {
         number: data.length - index,
         eid: item.eid,
         name: item.name,
+        department: item.department || 'N/A',
+        cluster: item.cluster || 'N/A',
         input: item.input,
         start_time: item.start_time,
         end_time: item.end_time,
@@ -59,6 +63,12 @@ export default function AHTMonitoringAdmin() {
       return { eid, name: found ? found.name : eid };
     });
 
+  // Extract unique departments for filter dropdown
+  const uniqueDepartments = Array.from(new Set(logs.map(log => log.department).filter(d => d && d !== 'N/A'))).sort();
+
+  // Extract unique clusters for filter dropdown
+  const uniqueClusters = Array.from(new Set(logs.map(log => log.cluster).filter(c => c && c !== 'N/A'))).sort();
+
   // Highlight matching query text helper function
   const highlightText = (text, query) => {
     if (!query) return text;
@@ -72,12 +82,14 @@ export default function AHTMonitoringAdmin() {
     );
   };
 
-  // Filter logs based on search query, date, and employee dropdown
+  // Filter logs based on search query, date, employee, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
       log.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.cluster.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.aht.toLowerCase().includes(searchQuery.toLowerCase());
 
     let matchesDate = true;
@@ -91,13 +103,23 @@ export default function AHTMonitoringAdmin() {
       matchesEid = log.eid === filterEid;
     }
 
-    return matchesSearch && matchesDate && matchesEid;
+    let matchesDepartment = true;
+    if (filterDepartment) {
+      matchesDepartment = log.department === filterDepartment;
+    }
+
+    let matchesCluster = true;
+    if (filterCluster) {
+      matchesCluster = log.cluster === filterCluster;
+    }
+
+    return matchesSearch && matchesDate && matchesEid && matchesDepartment && matchesCluster;
   });
 
   // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterDate, filterEid, itemsPerPage]);
+  }, [searchQuery, filterDate, filterEid, filterDepartment, filterCluster, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
@@ -175,6 +197,8 @@ export default function AHTMonitoringAdmin() {
       'No.': log.number,
       'EID': log.eid,
       'Name': log.name,
+      'Department': log.department,
+      'Cluster': log.cluster,
       'Input': log.input,
       'Start Time': log.start_time,
       'End Time': log.end_time,
@@ -259,13 +283,63 @@ export default function AHTMonitoringAdmin() {
               background: '#fff', 
               fontSize: '13px',
               color: filterEid ? '#0f172a' : '#64748b',
-              minWidth: '180px',
+              minWidth: '160px',
               boxSizing: 'border-box'
             }}
           >
             <option value="">All Employees</option>
             {uniqueEmployees.map(emp => (
               <option key={emp.eid} value={emp.eid}>{emp.name} ({emp.eid})</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Department Dropdown Filter */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Building size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <select 
+            value={filterDepartment} 
+            onChange={(e) => setFilterDepartment(e.target.value)}
+            style={{ 
+              padding: '8px 12px 8px 32px', 
+              borderRadius: '6px', 
+              border: '1px solid #cbd5e1', 
+              outline: 'none', 
+              background: '#fff', 
+              fontSize: '13px',
+              color: filterDepartment ? '#0f172a' : '#64748b',
+              minWidth: '160px',
+              boxSizing: 'border-box'
+            }}
+          >
+            <option value="">All Departments</option>
+            {uniqueDepartments.map(dept => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Cluster Dropdown Filter */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Layers size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <select 
+            value={filterCluster} 
+            onChange={(e) => setFilterCluster(e.target.value)}
+            style={{ 
+              padding: '8px 12px 8px 32px', 
+              borderRadius: '6px', 
+              border: '1px solid #cbd5e1', 
+              outline: 'none', 
+              background: '#fff', 
+              fontSize: '13px',
+              color: filterCluster ? '#0f172a' : '#64748b',
+              minWidth: '150px',
+              boxSizing: 'border-box'
+            }}
+          >
+            <option value="">All Clusters</option>
+            {uniqueClusters.map(cluster => (
+              <option key={cluster} value={cluster}>{cluster}</option>
             ))}
           </select>
         </div>
@@ -300,11 +374,11 @@ export default function AHTMonitoringAdmin() {
         </div>
 
         {/* Search Bar */}
-        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '180px' }}>
+        <div style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
           <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input 
             type="text"
-            placeholder="Search all records (name, input, AHT)..."
+            placeholder="Search records..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ 
@@ -332,7 +406,7 @@ export default function AHTMonitoringAdmin() {
 
       {/* Scrollable Table Container */}
       <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '820px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '950px' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
             <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
               <th style={{ padding: '12px 16px', background: '#f8fafc', width: '40px', textAlign: 'center' }}>
@@ -346,6 +420,8 @@ export default function AHTMonitoringAdmin() {
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>No.</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>EID</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Name</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Department</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Cluster</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Input</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Start Time</th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>End Time</th>
@@ -357,13 +433,13 @@ export default function AHTMonitoringAdmin() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
                   Loading enterprise records...
                 </td>
               </tr>
             ) : paginatedLogs.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                   {logs.length === 0 
                     ? 'No tracking activity logged across any employee accounts yet.' 
                     : 'No system logs match your selected filter criteria.'}
@@ -385,6 +461,8 @@ export default function AHTMonitoringAdmin() {
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
                     <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.department, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.cluster, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>

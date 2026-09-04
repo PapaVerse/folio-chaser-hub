@@ -7,6 +7,8 @@ export default function CreateUser() {
   const [employeeName, setEmployeeName] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('employee');
+  const [department, setDepartment] = useState('');
+  const [cluster, setCluster] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -25,7 +27,9 @@ export default function CreateUser() {
             eid: eid.trim(), 
             employee_name: employeeName.trim(), 
             password: password.trim(), 
-            role: role 
+            role: role,
+            department: department.trim(),
+            cluster: cluster.trim()
           }
         ]);
 
@@ -36,6 +40,8 @@ export default function CreateUser() {
       setEmployeeName('');
       setPassword('');
       setRole('employee');
+      setDepartment('');
+      setCluster('');
     } catch (err) {
       setErrorMessage(err.message || 'Failed to create user account.');
     } finally {
@@ -123,6 +129,38 @@ export default function CreateUser() {
               onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)'; }}
               onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
             />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Department
+              </label>
+              <input 
+                type="text" 
+                value={department} 
+                onChange={(e) => setDepartment(e.target.value)} 
+                placeholder="e.g., Operations" 
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: '#ffffff', color: '#0f172a', transition: 'all 0.2s ease' }}
+                onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)'; }}
+                onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Cluster
+              </label>
+              <input 
+                type="text" 
+                value={cluster} 
+                onChange={(e) => setCluster(e.target.value)} 
+                placeholder="e.g., Cluster A" 
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: '#ffffff', color: '#0f172a', transition: 'all 0.2s ease' }}
+                onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)'; }}
+                onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
           </div>
 
           <div>

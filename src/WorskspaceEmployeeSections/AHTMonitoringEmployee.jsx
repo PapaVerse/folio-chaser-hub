@@ -5,6 +5,9 @@ import { supabase } from '../supabaseClient';
 export default function AHTMonitoringEmployee({ currentUser }) {
   const eid = currentUser?.eid || currentUser?.employee_id || 'EMP001';
   const name = currentUser?.employee_name || currentUser?.name || 'Employee Name';
+  // Assuming currentUser might also provide department and cluster, with fallback values
+  const department = currentUser?.department || 'Operations';
+  const cluster = currentUser?.cluster || 'Cluster A';
 
   const STORAGE_SESSION_KEY = `aht_active_session_${eid}`;
   const hasRecoveredRef = useRef(false);
@@ -28,6 +31,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
   // Search, Filter, and Pagination States
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterCluster, setFilterCluster] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
 
@@ -70,6 +75,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
         number: nextNumber,
         eid: eid,
         name: name,
+        department: department,
+        cluster: cluster,
         input: session.input,
         start_time: session.startTime,
         end_time: endTimeStr,
@@ -102,6 +109,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
         number: data.length - index,
         eid: item.eid,
         name: item.name,
+        department: item.department || 'Operations',
+        cluster: item.cluster || 'Cluster A',
         input: item.input,
         start_time: item.start_time,
         end_time: item.end_time,
@@ -165,6 +174,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
       number: logs.length + 1,
       eid: eid,
       name: name,
+      department: department,
+      cluster: cluster,
       input: activeSession.input,
       start_time: activeSession.startTime,
       end_time: endTimeStr,
@@ -198,12 +209,18 @@ export default function AHTMonitoringEmployee({ currentUser }) {
     );
   };
 
-  // Filter logs based on search query and selected date
+  // Extract unique departments and clusters for dynamic filter dropdown options
+  const uniqueDepartments = [...new Set(logs.map(log => log.department))];
+  const uniqueClusters = [...new Set(logs.map(log => log.cluster))];
+
+  // Filter logs based on search query, selected date, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
       log.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.eid.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.cluster.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.aht.toLowerCase().includes(searchQuery.toLowerCase());
 
     let matchesDate = true;
@@ -212,13 +229,16 @@ export default function AHTMonitoringEmployee({ currentUser }) {
       matchesDate = logDateOnly === filterDate;
     }
 
-    return matchesSearch && matchesDate;
+    const matchesDepartment = filterDepartment ? log.department === filterDepartment : true;
+    const matchesCluster = filterCluster ? log.cluster === filterCluster : true;
+
+    return matchesSearch && matchesDate && matchesDepartment && matchesCluster;
   });
 
   // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterDate, itemsPerPage]);
+  }, [searchQuery, filterDate, filterDepartment, filterCluster, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
@@ -322,8 +342,10 @@ export default function AHTMonitoringEmployee({ currentUser }) {
             <Clock size={18} color="#2563eb" /> AHT Activity Log ({name})
           </h3>
 
-          {/* Search and Date Filter Controls */}
+          {/* Search, Date, Department, and Cluster Filter Controls */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            
+            {/* Search Input */}
             <div style={{ position: 'relative' }}>
               <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
@@ -337,7 +359,7 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                   border: '1px solid #cbd5e1', 
                   fontSize: '13px', 
                   outline: 'none',
-                  width: '200px',
+                  width: '180px',
                   boxSizing: 'border-box'
                 }}
               />
@@ -351,6 +373,47 @@ export default function AHTMonitoringEmployee({ currentUser }) {
               )}
             </div>
 
+            {/* Department Filter Select */}
+            <select
+              value={filterDepartment}
+              onChange={(e) => setFilterDepartment(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '13px',
+                outline: 'none',
+                background: '#fff',
+                color: filterDepartment ? '#0f172a' : '#64748b'
+              }}
+            >
+              <option value="">All Departments</option>
+              {uniqueDepartments.map((dept, idx) => (
+                <option key={idx} value={dept}>{dept}</option>
+              ))}
+            </select>
+
+            {/* Cluster Filter Select */}
+            <select
+              value={filterCluster}
+              onChange={(e) => setFilterCluster(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '13px',
+                outline: 'none',
+                background: '#fff',
+                color: filterCluster ? '#0f172a' : '#64748b'
+              }}
+            >
+              <option value="">All Clusters</option>
+              {uniqueClusters.map((clusterName, idx) => (
+                <option key={idx} value={clusterName}>{clusterName}</option>
+              ))}
+            </select>
+
+            {/* Date Filter */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
               <input 
@@ -383,12 +446,14 @@ export default function AHTMonitoringEmployee({ currentUser }) {
 
         {/* Scrollable Table Container */}
         <div style={{ maxHeight: '420px', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '700px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '850px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
               <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>No.</th>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>EID</th>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Name</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Department</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Cluster</th>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Input</th>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Start Time</th>
                 <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>End Time</th>
@@ -399,10 +464,10 @@ export default function AHTMonitoringEmployee({ currentUser }) {
             <tbody>
               {paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                     {logs.length === 0 
                       ? 'No completed sessions logged yet for your account. Start a tracking session above.' 
-                      : 'No logs match your search or date filter criteria.'}
+                      : 'No logs match your search or filter criteria.'}
                   </td>
                 </tr>
               ) : (
@@ -411,6 +476,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
                     <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.department, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.cluster, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
                     <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>
