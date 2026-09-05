@@ -10,11 +10,13 @@ import {
   PanelLeftOpen, 
   Info, 
   User as UserIcon,
-  ShieldCheck 
+  ShieldCheck,
+  BookOpen 
 } from 'lucide-react';
 import CreateUser from './WorskspaceAdminSections/CreateUser';
 import ManageUser from './WorskspaceAdminSections/ManageUser';
 import AHTMonitoringAdmin from './WorskspaceAdminSections/AHTMonitoringAdmin';
+import KnowledgeGuidelineAdmin from './WorskspaceAdminSections/KnowledgeGuidelineAdmin';
 
 export default function WorkspaceDashboard({ currentUser, onLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -111,6 +113,16 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
             {isSidebarOpen && <span>Scoreboard</span>}
           </button>
 
+          {/* Knowledge Guidelines */}
+          <button 
+            onClick={() => setActiveNav('knowledge-guidelines')}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'knowledge-guidelines' ? '#eff6ff' : 'transparent', color: activeNav === 'knowledge-guidelines' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}
+            title={!isSidebarOpen ? "Knowledge Guidelines" : ""}
+          >
+            <BookOpen size={18} style={{ flexShrink: 0 }} />
+            {isSidebarOpen && <span>SOP & Guidelines</span>}
+          </button>
+
           {/* Divider */}
           <div style={{ height: '1px', background: '#e2e8f0', margin: '8px 4px' }} />
 
@@ -144,7 +156,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
         <div style={{ background: '#ffffff', padding: '20px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' }}>
           <div>
             <h1 style={{ margin: '0 0 2px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
-              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav.replace('-', ' ')}
+              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav === 'knowledge-guidelines' ? 'Knowledge Base & SOP Guidelines' : activeNav.replace('-', ' ')}
             </h1>
             <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>
           </div>
@@ -182,6 +194,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
           {activeNav === 'create-user' && <CreateUser />}
           {activeNav === 'manage-user' && <ManageUser />}
           {activeNav === 'aht-monitoring' && <AHTMonitoringAdmin />}
+          {activeNav === 'knowledge-guidelines' && <KnowledgeGuidelineAdmin currentUser={currentUser} />}
           
           {(activeNav === 'dashboard' || activeNav === 'scoreboard') && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>

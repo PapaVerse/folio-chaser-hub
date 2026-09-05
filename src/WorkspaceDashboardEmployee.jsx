@@ -3,6 +3,7 @@ import {
   LayoutDashboard, 
   Clock, 
   Award, 
+  BookOpen,
   LogOut, 
   PanelLeftClose, 
   PanelLeftOpen, 
@@ -13,6 +14,7 @@ import {
   X 
 } from 'lucide-react';
 import AHTMonitoringEmployee from './WorskspaceEmployeeSections/AHTMonitoringEmployee';
+import KnowledgeGuidelineEmployee from './WorskspaceEmployeeSections/KnowledgeGuidelineEmployee';
 
 export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -159,6 +161,16 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
             {(isMobile || isSidebarOpen) && <span>Scoreboard</span>}
           </button>
 
+          {/* Guidelines / Knowledge Base */}
+          <button 
+            onClick={() => handleNavClick('guidelines')}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'guidelines' ? '#eff6ff' : 'transparent', color: activeNav === 'guidelines' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            title={(!isMobile && !isSidebarOpen) ? "Guidelines" : ""}
+          >
+            <BookOpen size={18} style={{ flexShrink: 0 }} />
+            {(isMobile || isSidebarOpen) && <span>Guidelines</span>}
+          </button>
+
         </div>
       </div>
 
@@ -178,7 +190,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
             )}
             <div>
               <h1 style={{ margin: '0 0 2px 0', fontSize: isMobile ? '16px' : '20px', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
-                {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav}
+                {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : (activeNav === 'guidelines' ? 'Knowledge Base & Guidelines' : activeNav)}
               </h1>
               {!isMobile && <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>}
             </div>
@@ -218,6 +230,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
         {/* Dynamic Panel Content Router */}
         <div style={{ padding: isMobile ? '16px' : '40px', flex: 1, boxSizing: 'border-box', overflowX: 'hidden' }}>
           {activeNav === 'aht-monitoring' && <AHTMonitoringEmployee currentUser={currentUser} />}
+          {activeNav === 'guidelines' && <KnowledgeGuidelineEmployee currentUser={currentUser} />}
           
           {(activeNav === 'dashboard' || activeNav === 'scoreboard') && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
