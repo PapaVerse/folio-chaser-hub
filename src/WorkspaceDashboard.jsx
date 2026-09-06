@@ -12,7 +12,8 @@ import {
   User as UserIcon,
   ShieldCheck,
   BookOpen,
-  Network 
+  Network,
+  CalendarDays
 } from 'lucide-react';
 import CreateUser from './WorskspaceAdminSections/CreateUser';
 import ManageUser from './WorskspaceAdminSections/ManageUser';
@@ -20,6 +21,7 @@ import AHTMonitoringAdmin from './WorskspaceAdminSections/AHTMonitoringAdmin';
 import KnowledgeGuidelineAdmin from './WorskspaceAdminSections/KnowledgeGuidelineAdmin';
 import WorkspaceDashboardDisplay from './WorskspaceAdminSections/WorkspaceDashboardDisplay';
 import AdminProfile from './WorskspaceAdminSections/AdminProfile';
+import ScheduleAdmin from './WorskspaceAdminSections/ScheduleAdmin';
 
 export default function WorkspaceDashboard({ currentUser, onLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -96,6 +98,16 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
             {isSidebarOpen && <span>Dashboard</span>}
           </button>
 
+          {/* Schedule */}
+          <button 
+            onClick={() => setActiveNav('schedule')}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'schedule' ? '#eff6ff' : 'transparent', color: activeNav === 'schedule' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}
+            title={!isSidebarOpen ? "Schedule" : ""}
+          >
+            <CalendarDays size={18} style={{ flexShrink: 0 }} />
+            {isSidebarOpen && <span>Schedule</span>}
+          </button>
+
           {/* AHT Monitoring */}
           <button 
             onClick={() => setActiveNav('aht-monitoring')}
@@ -169,7 +181,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
         <div style={{ background: '#ffffff', padding: '20px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' }}>
           <div>
             <h1 style={{ margin: '0 0 2px 0', fontSize: '20px', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
-              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav === 'knowledge-guidelines' ? 'Knowledge Base & SOP Guidelines' : activeNav === 'admin-profile' ? "Team's Profile Hierarchy" : activeNav.replace('-', ' ')}
+              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav === 'knowledge-guidelines' ? 'Knowledge Base & SOP Guidelines' : activeNav === 'admin-profile' ? "Team's Profile Hierarchy" : activeNav === 'schedule' ? 'Schedule & Calendar Events' : activeNav.replace('-', ' ')}
             </h1>
             <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>
           </div>
@@ -207,6 +219,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
           {activeNav === 'dashboard' && (
             <WorkspaceDashboardDisplay onViewMoreLogs={() => setActiveNav('aht-monitoring')} />
           )}
+          {activeNav === 'schedule' && <ScheduleAdmin />}
           {activeNav === 'create-user' && <CreateUser />}
           {activeNav === 'manage-user' && <ManageUser />}
           {activeNav === 'aht-monitoring' && <AHTMonitoringAdmin />}
