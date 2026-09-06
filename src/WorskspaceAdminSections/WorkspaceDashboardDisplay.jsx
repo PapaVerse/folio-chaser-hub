@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Users, Building2, Activity, Clock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Users, Building2, Activity, Clock, ShieldCheck, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 
 export default function WorkspaceDashboardDisplay({ onViewMoreLogs }) {
   const [totalUsers, setTotalUsers] = useState(0);
   const [departments, setDepartments] = useState([]);
   const [activityStream, setActivityStream] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
@@ -46,6 +47,26 @@ export default function WorkspaceDashboardDisplay({ onViewMoreLogs }) {
         }));
         setActivityStream(formattedLogs);
       }
+
+      // Fetch upcoming scheduled events for the current month
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfMonth = `${year}-${month}-01`;
+      const endOfMonth = `${year}-${month}-${new Date(year, now.getMonth() + 1, 0).getDate()}`;
+
+      const { data: schedData, error: schedError } = await supabase
+        .from('admin_schedules')
+        .select('*')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
+        .order('date', { ascending: true });
+
+      if (schedError && schedError.code !== '42P01') throw schedError;
+      if (schedData) {
+        setUpcomingEvents(schedData);
+      }
+
     } catch (err) {
       console.error('Error fetching dashboard data:', err.message);
     } finally {
@@ -70,9 +91,17 @@ export default function WorkspaceDashboardDisplay({ onViewMoreLogs }) {
       })
       .subscribe();
 
+    const schedSubscription = supabase
+      .channel('public:admin_schedules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_schedules' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(usersSubscription);
       supabase.removeChannel(ahtSubscription);
+      supabase.removeChannel(schedSubscription);
     };
   }, []);
 
@@ -123,6 +152,53 @@ export default function WorkspaceDashboardDisplay({ onViewMoreLogs }) {
           </div>
         </div>
 
+      </div>
+
+      {/* Upcoming Plotted Events for the Month (Compact View) */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <CalendarIcon size={18} color="#2563eb" />
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>Upcoming Plotted Events This Month</h3>
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px' }}>
+            {upcomingEvents.length} Scheduled
+          </span>
+        </div>
+
+        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', maxHeight: '180px', overflowY: 'auto' }}>
+          {upcomingEvents.length > 0 ? (
+            upcomingEvents.map((ev) => (
+              <div 
+                key={ev.id} 
+                style={{ 
+                  background: '#f8fafc', 
+                  border: '1px solid #e2e8f0', 
+                  borderLeft: `3px solid ${ev.color || '#2563eb'}`, 
+                  borderRadius: '8px', 
+                  padding: '10px 12px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '3px' 
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '1px 5px', borderRadius: '4px' }}>
+                    {ev.date}
+                  </span>
+                </div>
+                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</h4>
+                {ev.description && (
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.description}</p>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '14px', color: '#94a3b8', fontSize: '12px' }}>
+              No scheduled events plotted for this month yet.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 5 Recent Inputs Activity Stream Section */}
