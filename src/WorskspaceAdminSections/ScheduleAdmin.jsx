@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Calendar as CalendarIcon, Plus, Trash2, Edit3, Palette, X, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Edit3, Palette, X, Clock, AlertCircle } from 'lucide-react';
 
 export default function ScheduleAdmin() {
   const [events, setEvents] = useState([]);
@@ -14,6 +14,9 @@ export default function ScheduleAdmin() {
   const [customColor, setCustomColor] = useState('#2563eb'); // Custom color picker state
   const [editingId, setEditingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Delete Confirmation Modal state
+  const [deleteId, setDeleteId] = useState(null);
 
   // Calendar navigation states
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -78,16 +81,17 @@ export default function ScheduleAdmin() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+  const confirmDelete = async () => {
+    if (!deleteId) return;
 
     try {
       const { error } = await supabase
         .from('admin_schedules')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteId);
 
       if (error) throw error;
+      setDeleteId(null);
       fetchEvents();
     } catch (err) {
       console.error('Error deleting schedule:', err.message);
@@ -239,6 +243,39 @@ export default function ScheduleAdmin() {
         </div>
       )}
 
+      {/* Modern Delete Confirmation Popup */}
+      {deleteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '380px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', boxSizing: 'border-box', textAlign: 'center' }}>
+            
+            <div style={{ background: '#ffeeec', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: '#dc2626' }}>
+              <AlertCircle size={24} />
+            </div>
+
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Delete Event</h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => setDeleteId(null)} 
+                style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete} 
+                style={{ flex: 1, padding: '10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Calendar Grid Container */}
       <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
         
@@ -347,7 +384,7 @@ export default function ScheduleAdmin() {
                           <button onClick={() => handleEdit(ev)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }} title="Edit">
                             <Edit3 size={10} />
                           </button>
-                          <button onClick={() => handleDelete(ev.id)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }} title="Delete">
+                          <button onClick={() => setDeleteId(ev.id)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }} title="Delete">
                             <Trash2 size={10} />
                           </button>
                         </div>
