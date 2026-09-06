@@ -17,6 +17,7 @@ import CreateUser from './WorskspaceAdminSections/CreateUser';
 import ManageUser from './WorskspaceAdminSections/ManageUser';
 import AHTMonitoringAdmin from './WorskspaceAdminSections/AHTMonitoringAdmin';
 import KnowledgeGuidelineAdmin from './WorskspaceAdminSections/KnowledgeGuidelineAdmin';
+import WorkspaceDashboardDisplay from './WorskspaceAdminSections/WorkspaceDashboardDisplay';
 
 export default function WorkspaceDashboard({ currentUser, onLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -190,20 +191,23 @@ export default function WorkspaceDashboard({ currentUser, onLogout }) {
         </div>
 
         {/* Dynamic Panel Content Router */}
-        <div style={{ padding: '40px', flex: 1, boxSizing: 'border-box' }}>
+        <div style={{ padding: '40px', flex: 1, boxSizing: 'border-box', overflowY: 'auto' }}>
+          {activeNav === 'dashboard' && (
+            <WorkspaceDashboardDisplay onViewMoreLogs={() => setActiveNav('aht-monitoring')} />
+          )}
           {activeNav === 'create-user' && <CreateUser />}
           {activeNav === 'manage-user' && <ManageUser />}
           {activeNav === 'aht-monitoring' && <AHTMonitoringAdmin />}
           {activeNav === 'knowledge-guidelines' && <KnowledgeGuidelineAdmin currentUser={currentUser} />}
           
-          {(activeNav === 'dashboard' || activeNav === 'scoreboard') && (
+          {activeNav === 'scoreboard' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <div style={{ background: '#ffffff', padding: '50px 40px', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', maxWidth: '500px', width: '100%', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
                 <div style={{ width: '48px', height: '48px', background: '#eff6ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 20px auto' }}>
                   <Info size={24} />
                 </div>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a', textTransform: 'capitalize' }}>
-                  {activeNav} Module
+                  Scoreboard Module
                 </h3>
                 <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
                   Data will display in here soon. Content for this section is currently under development.
