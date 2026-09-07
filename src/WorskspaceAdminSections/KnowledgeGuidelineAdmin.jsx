@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { BookOpen, FileText, Trash2, Edit2, X, Plus, Calendar, User, Download, FileSpreadsheet, Presentation, AlertTriangle, Search } from 'lucide-react';
+import { BookOpen, FileText, Trash2, Edit2, X, Plus, Calendar, User, Download, FileSpreadsheet, Presentation, AlertTriangle, Search, Link as LinkIcon } from 'lucide-react';
 
 export default function KnowledgeGuidelineAdmin({ currentUser }) {
   const [documents, setDocuments] = useState([]);
@@ -17,6 +17,7 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [file, setFile] = useState(null);
+  const [externalUrl, setExternalUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
   // Department tabs, search state
@@ -57,8 +58,8 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
 
   const handleFileUpload = async (e) => {
     e.preventDefault();
-    if (!title.trim() || (!file && !editingDoc)) {
-      alert('Please provide a title and select a file.');
+    if (!title.trim() || (!file && !externalUrl.trim() && !editingDoc)) {
+      alert('Please provide a title and either select a file or provide a clickable link URL.');
       return;
     }
 
@@ -68,7 +69,13 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
       let fileUrl = editingDoc?.file_url || '';
       let fileName = editingDoc?.file_name || '';
 
-      if (file) {
+      // Handle External Clickable Link if provided
+      if (externalUrl.trim()) {
+        fileUrl = externalUrl.trim();
+        fileName = externalUrl.trim();
+      } 
+      // Otherwise handle File upload if a new file is selected
+      else if (file) {
         const fileExt = file.name.split('.').pop().toLowerCase();
         const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'];
         if (!allowedExtensions.includes(fileExt)) {
@@ -126,7 +133,7 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
       fetchData();
     } catch (error) {
       console.error('Error saving guideline:', error);
-      alert('Failed to upload document. Make sure the storage bucket "guidelines" exists in Supabase.');
+      alert('Failed to save document. Make sure the storage bucket "guidelines" exists in Supabase if uploading files.');
     } finally {
       setUploading(false);
     }
@@ -167,11 +174,15 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
       setTitle(doc.title);
       setDepartment(doc.department);
       setFile(null);
+      // Check if current file_url is an external link (doesn't point to Supabase storage guidelines bucket)
+      const isExternal = doc.file_url && !doc.file_url.includes('guidelines');
+      setExternalUrl(isExternal ? doc.file_url : '');
     } else {
       setEditingDoc(null);
       setTitle('');
       setDepartment(activeTab !== 'All' ? activeTab : departmentsList[0]);
       setFile(null);
+      setExternalUrl('');
     }
     setIsModalOpen(true);
   };
@@ -181,9 +192,11 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
     setEditingDoc(null);
     setTitle('');
     setFile(null);
+    setExternalUrl('');
   };
 
-  const getFileIcon = (fileName) => {
+  const getFileIcon = (fileName, fileUrl) => {
+    if (fileUrl && !fileUrl.includes('guidelines')) return <LinkIcon size={20} color="#ea580c" />;
     if (!fileName) return <FileText size={20} color="#2563eb" />;
     const ext = fileName.split('.').pop().toLowerCase();
     if (['xls', 'xlsx', 'csv'].includes(ext)) return <FileSpreadsheet size={20} color="#16a34a" />;
@@ -318,70 +331,74 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
             <p style={{ margin: 0, fontSize: '12px' }}>Try adjusting your search query or selecting another tab.</p>
           </div>
         ) : (
-          filteredDocs.map((doc) => (
-            <div key={doc.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', position: 'relative' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
-                      {getFileIcon(doc.file_name)}
+          filteredDocs.map((doc) => {
+            const isExternalLink = doc.file_url && !doc.file_url.includes('guidelines');
+            return (
+              <div key={doc.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', position: 'relative' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
+                        {getFileIcon(doc.file_name, doc.file_url)}
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px' }}>
+                        {doc.department}
+                      </span>
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px' }}>
-                      {doc.department}
-                    </span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button 
+                        onClick={() => openModal(doc)}
+                        title="Edit Document Info"
+                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => confirmDelete(doc)}
+                        title="Delete Document"
+                        style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button 
-                      onClick={() => openModal(doc)}
-                      title="Edit Document Info"
-                      style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button 
-                      onClick={() => confirmDelete(doc)}
-                      title="Delete Document"
-                      style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                    {highlightMatch(doc.title, searchTerm)}
+                  </h3>
+                  
+                  <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b', wordBreak: 'break-all' }}>
+                    {isExternalLink ? `🔗 ${highlightMatch(doc.file_url, searchTerm)}` : `📁 ${highlightMatch(doc.file_name || 'Attached File', searchTerm)}`}
+                  </p>
                 </div>
 
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>
-                  {highlightMatch(doc.title, searchTerm)}
-                </h3>
-                
-                <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b', wordBreak: 'break-all' }}>
-                  📁 {highlightMatch(doc.file_name || 'Attached File', searchTerm)}
-                </p>
-              </div>
+                <div>
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <User size={12} color="#94a3b8" />
+                      <span>Uploaded by <strong>{doc.uploaded_by || 'Administrator'}</strong></span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={12} color="#94a3b8" />
+                      <span>{new Date(doc.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    </div>
+                  </div>
 
-              <div>
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#64748b' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <User size={12} color="#94a3b8" />
-                    <span>Uploaded by <strong>{doc.uploaded_by || 'Administrator'}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Calendar size={12} color="#94a3b8" />
-                    <span>{new Date(doc.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                  </div>
+                  {doc.file_url && (
+                    <a 
+                      href={doc.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: isExternalLink ? '#fdf4ff' : '#eff6ff', color: isExternalLink ? '#c026d3' : '#2563eb', border: `1px solid ${isExternalLink ? '#f5d0fe' : '#bfdbfe'}`, borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
+                    >
+                      {isExternalLink ? <LinkIcon size={13} /> : <Download size={13} />}
+                      {isExternalLink ? 'Open External Link' : 'View / Download File'}
+                    </a>
+                  )}
                 </div>
-
-                {doc.file_url && (
-                  <a 
-                    href={doc.file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
-                  >
-                    <Download size={13} /> View / Download File
-                  </a>
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -465,20 +482,54 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
                 </select>
               </div>
 
+              {/* Option A: Upload File */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                  Upload File (PDF, XLSX, DOCX, PPT) {editingDoc && <span style={{ color: '#64748b', fontWeight: '400' }}>(Leave blank to keep existing)</span>}
+                  Upload File (PDF, XLSX, DOCX, PPT)
                 </label>
                 <input 
                   type="file"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv"
-                  onChange={(e) => setFile(e.target.files[0])}
+                  onChange={(e) => {
+                    setFile(e.target.files[0]);
+                    if (e.target.files[0]) setExternalUrl(''); // Clear link if file is chosen
+                  }}
                   style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box' }}
                 />
-                {editingDoc && !file && (
-                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>Current file: {editingDoc.file_name}</span>
-                )}
               </div>
+
+              {/* Divider / Choice Indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '11px', fontWeight: '600', margin: '2px 0' }}>
+                <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+                <span style={{ padding: '0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or Provide External Link</span>
+                <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+              </div>
+
+              {/* Option B: Clickable Link URL */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Clickable Web Link (URL)
+                </label>
+                <input 
+                  type="url"
+                  placeholder="https://example.com/guideline-doc or Notion/Google Doc link"
+                  value={externalUrl}
+                  onChange={(e) => {
+                    setExternalUrl(e.target.value);
+                    if (e.target.value) setFile(null); // Clear file if URL is typed
+                  }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  When users click this link, it will open securely in a new browser tab (`target="_blank"`).
+                </span>
+              </div>
+
+              {editingDoc && !file && !externalUrl && (
+                <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Current attached resource: <strong>{editingDoc.file_name || editingDoc.file_url}</strong></span>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button 
@@ -493,7 +544,7 @@ export default function KnowledgeGuidelineAdmin({ currentUser }) {
                   disabled={uploading}
                   style={{ padding: '10px 20px', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: uploading ? 'not-allowed' : 'pointer', color: '#fff' }}
                 >
-                  {uploading ? 'Uploading...' : (editingDoc ? 'Save Changes' : 'Upload Document')}
+                  {uploading ? 'Saving...' : (editingDoc ? 'Save Changes' : 'Publish Resource')}
                 </button>
               </div>
 

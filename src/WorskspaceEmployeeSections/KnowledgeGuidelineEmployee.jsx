@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { BookOpen, FileText, Calendar, User, Download, FileSpreadsheet, Presentation, Search, Edit3, X, Upload, CheckCircle2 } from 'lucide-react';
+import { BookOpen, FileText, Calendar, User, Download, FileSpreadsheet, Presentation, Search, Edit3, X, Upload, CheckCircle2, Link as LinkIcon } from 'lucide-react';
 
 export default function KnowledgeGuidelineEmployee({ currentUser }) {
   const [documents, setDocuments] = useState([]);
@@ -13,6 +13,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
   const [editingDoc, setEditingDoc] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [externalUrl, setExternalUrl] = useState('');
   const [updating, setUpdating] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [fileError, setFileError] = useState('');
@@ -52,7 +53,8 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
     setLoading(false);
   };
 
-  const getFileIcon = (fileName) => {
+  const getFileIcon = (fileName, fileUrl) => {
+    if (fileUrl && !fileUrl.includes('guidelines') && !fileUrl.includes('documents')) return <LinkIcon size={20} color="#ea580c" />;
     if (!fileName) return <FileText size={20} color="#2563eb" />;
     const ext = fileName.split('.').pop().toLowerCase();
     if (['xls', 'xlsx', 'csv'].includes(ext)) return <FileSpreadsheet size={20} color="#16a34a" />;
@@ -78,6 +80,8 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
     setEditingDoc(doc);
     setEditTitle(doc.title || '');
     setSelectedFile(null);
+    const isExternal = doc.file_url && !doc.file_url.includes('guidelines') && !doc.file_url.includes('documents');
+    setExternalUrl(isExternal ? doc.file_url : '');
     setFileError('');
     setSuccessMessage('');
   };
@@ -97,6 +101,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
 
     setFileError('');
     setSelectedFile(file);
+    setExternalUrl(''); // Clear link input if file is chosen
   };
 
   const handleUpdateSubmit = async (e) => {
@@ -108,17 +113,18 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
       let fileUrl = editingDoc.file_url;
       let fileName = editingDoc.file_name;
 
-      if (selectedFile) {
+      if (externalUrl.trim()) {
+        fileUrl = externalUrl.trim();
+        fileName = externalUrl.trim();
+      } else if (selectedFile) {
         const cleanName = selectedFile.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
         const uniqueFileName = `${Date.now()}_${cleanName}`;
         const filePath = `guidelines/${uniqueFileName}`;
 
-        // Attempt upload to 'documents' bucket with upsert
         let uploadResult = await supabase.storage.from('documents').upload(filePath, selectedFile, { upsert: true });
         let bucketUsed = 'documents';
 
         if (uploadResult.error) {
-          // Fallback to 'guidelines' bucket if 'documents' fails
           uploadResult = await supabase.storage.from('guidelines').upload(filePath, selectedFile, { upsert: true });
           bucketUsed = 'guidelines';
           if (uploadResult.error) {
@@ -142,7 +148,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
           title: editTitle,
           file_name: fileName,
           file_url: fileUrl,
-          uploaded_by: currentUser?.employee_name || editingDoc.uploaded_by
+          uploaded_by: currentUser?.employee_name || currentUser?.name || editingDoc.uploaded_by
         })
         .eq('id', editingDoc.id);
 
@@ -261,61 +267,65 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
               <p style={{ margin: 0, fontSize: '12px' }}>Try adjusting your search or selecting a different department tab.</p>
             </div>
           ) : (
-            filteredDocs.map((doc) => (
-              <div key={doc.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
-                      {getFileIcon(doc.file_name)}
+            filteredDocs.map((doc) => {
+              const isExternalLink = doc.file_url && !doc.file_url.includes('guidelines') && !doc.file_url.includes('documents');
+              return (
+                <div key={doc.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
+                        {getFileIcon(doc.file_name, doc.file_url)}
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px' }}>
+                          {doc.department}
+                        </span>
+                        <button
+                          onClick={() => handleOpenEdit(doc)}
+                          style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '600', color: '#2563eb' }}
+                          title="Update Title / Replace File Version"
+                        >
+                          <Edit3 size={13} /> Edit
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px' }}>
-                        {doc.department}
-                      </span>
-                      <button
-                        onClick={() => handleOpenEdit(doc)}
-                        style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '600', color: '#2563eb' }}
-                        title="Update Title / Replace File Version"
+
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                      {highlightMatch(doc.title, searchTerm)}
+                    </h3>
+                    
+                    <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b', wordBreak: 'break-all' }}>
+                      {isExternalLink ? `🔗 ${highlightMatch(doc.file_url, searchTerm)}` : `📁 ${highlightMatch(doc.file_name || 'Attached File', searchTerm)}`}
+                    </p>
+                  </div>
+
+                  <div>
+                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <User size={12} color="#94a3b8" />
+                        <span>Updated by <strong>{doc.uploaded_by || 'Administrator'}</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={12} color="#94a3b8" />
+                        <span>{new Date(doc.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                      </div>
+                    </div>
+
+                    {doc.file_url && (
+                      <a 
+                        href={doc.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: isExternalLink ? '#fdf4ff' : '#eff6ff', color: isExternalLink ? '#c026d3' : '#2563eb', border: `1px solid ${isExternalLink ? '#f5d0fe' : '#bfdbfe'}`, borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
                       >
-                        <Edit3 size={13} /> Edit
-                      </button>
-                    </div>
+                        {isExternalLink ? <LinkIcon size={13} /> : <Download size={13} />}
+                        {isExternalLink ? 'Open External Link' : 'View / Download File'}
+                      </a>
+                    )}
                   </div>
-
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>
-                    {highlightMatch(doc.title, searchTerm)}
-                  </h3>
-                  
-                  <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b', wordBreak: 'break-all' }}>
-                    📁 {highlightMatch(doc.file_name || 'Attached File', searchTerm)}
-                  </p>
                 </div>
-
-                <div>
-                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#64748b' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <User size={12} color="#94a3b8" />
-                      <span>Updated by <strong>{doc.uploaded_by || 'Administrator'}</strong></span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Calendar size={12} color="#94a3b8" />
-                      <span>{new Date(doc.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                    </div>
-                  </div>
-
-                  {doc.file_url && (
-                    <a 
-                      href={doc.file_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
-                    >
-                      <Download size={13} /> View / Download File
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
@@ -383,8 +393,31 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                   {fileError && <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#dc2626', fontWeight: '600' }}>{fileError}</p>}
                 </div>
 
+                {/* Divider / Choice Indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '11px', fontWeight: '600', margin: '0' }}>
+                  <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+                  <span style={{ padding: '0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or External Link URL</span>
+                  <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    External Web Link (URL)
+                  </label>
+                  <input 
+                    type="url"
+                    placeholder="https://example.com/guideline-doc"
+                    value={externalUrl}
+                    onChange={(e) => {
+                      setExternalUrl(e.target.value);
+                      if (e.target.value) setSelectedFile(null); // Clear selected file if URL is entered
+                    }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
                 <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '10px 12px', borderRadius: '8px', fontSize: '11px', color: '#b45309' }}>
-                  ℹ️ Note: Deletion is restricted. You can update titles or replace the file version at any time.
+                  ℹ️ Note: Deletion is restricted. You can update titles, upload new files, or link external URLs at any time.
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
