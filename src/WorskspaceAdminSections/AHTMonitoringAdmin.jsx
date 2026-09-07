@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, CheckCircle2, Building, Layers } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
-export default function AHTMonitoringAdmin() {
+export default function AHTMonitoringAdmin({ isDarkMode }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,11 +19,41 @@ export default function AHTMonitoringAdmin() {
   // Selection & Deletion States
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [targetDeleteLog, setTargetDeleteLog] = useState(null); // null means bulk delete, object means single delete
+  const [targetDeleteLog, setTargetDeleteLog] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Theme helper definitions aligned with overall application themes
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    border: isDarkMode ? '#334155' : '#e2e8f0',
+    borderLight: isDarkMode ? '#334155' : '#f1f5f9',
+    textMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    textMuted: isDarkMode ? '#94a3b8' : '#64748b',
+    itemBg: isDarkMode ? '#0f172a' : '#ffffff',
+    rowHoverBg: isDarkMode ? '#111827' : '#f8fafc',
+    selectedRowBg: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4',
+    filterBarBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    modalBg: isDarkMode ? '#1e293b' : '#fff',
+    inputBg: isDarkMode ? '#0f172a' : '#fff',
+    inputBorder: isDarkMode ? '#334155' : '#cbd5e1',
+    inputText: isDarkMode ? '#f8fafc' : '#0f172a',
+    theadBg: isDarkMode ? '#111827' : '#f8fafc',
+    iconBoxBg: isDarkMode ? 'rgba(37, 99, 235, 0.25)' : '#eff6ff'
+  };
 
   useEffect(() => {
     fetchAllLogs();
+
+    const ahtSubscription = supabase
+      .channel('public:aht_logs_admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'aht_logs' }, () => {
+        fetchAllLogs();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ahtSubscription);
+    };
   }, []);
 
   const fetchAllLogs = async () => {
@@ -37,7 +67,7 @@ export default function AHTMonitoringAdmin() {
       console.error('Error fetching all AHT logs for admin:', error);
     } else if (data) {
       const formattedLogs = data.map((item, index) => ({
-        id: item.id, // Ensure your table has an 'id' primary key column
+        id: item.id,
         number: data.length - index,
         eid: item.eid,
         name: item.name,
@@ -213,13 +243,21 @@ export default function AHTMonitoringAdmin() {
   };
 
   return (
-    <div style={{ background: '#ffffff', padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: '1px solid #e2e8f0', minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
+    <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.border}`, minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden', boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
       
       {/* Header and Controls Action Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-          <Clock size={20} color="#2563eb" /> All Employee AHT Monitoring (Admin View)
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: theme.iconBoxBg, padding: '10px', borderRadius: '10px', color: '#2563eb' }}>
+            <Clock size={22} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: theme.textMain, margin: '0 0 2px 0' }}>
+              All Employee AHT Monitoring (Admin View)
+            </h3>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>Review, filter, and manage handling times across organizational teams.</p>
+          </div>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {selectedIds.length > 0 && (
@@ -227,9 +265,9 @@ export default function AHTMonitoringAdmin() {
               onClick={openBulkDeleteModal}
               style={{
                 padding: '9px 16px',
-                background: '#fee2e2',
+                background: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#fee2e2',
                 color: '#dc2626',
-                border: '1px solid #fecaca',
+                border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`,
                 borderRadius: '8px',
                 fontWeight: '600',
                 fontSize: '13px',
@@ -267,22 +305,22 @@ export default function AHTMonitoringAdmin() {
       </div>
 
       {/* Filter Toolbar */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', background: theme.filterBarBg, padding: '14px', borderRadius: '10px', border: `1px solid ${theme.border}` }}>
         
         {/* Employee Dropdown Filter */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Users size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <Users size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
           <select 
             value={filterEid} 
             onChange={(e) => setFilterEid(e.target.value)}
             style={{ 
               padding: '8px 12px 8px 32px', 
               borderRadius: '6px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               outline: 'none', 
-              background: '#fff', 
+              background: theme.inputBg, 
               fontSize: '13px',
-              color: filterEid ? '#0f172a' : '#64748b',
+              color: filterEid ? theme.textMain : theme.textMuted,
               minWidth: '160px',
               boxSizing: 'border-box'
             }}
@@ -296,18 +334,18 @@ export default function AHTMonitoringAdmin() {
 
         {/* Department Dropdown Filter */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Building size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <Building size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
           <select 
             value={filterDepartment} 
             onChange={(e) => setFilterDepartment(e.target.value)}
             style={{ 
               padding: '8px 12px 8px 32px', 
               borderRadius: '6px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               outline: 'none', 
-              background: '#fff', 
+              background: theme.inputBg, 
               fontSize: '13px',
-              color: filterDepartment ? '#0f172a' : '#64748b',
+              color: filterDepartment ? theme.textMain : theme.textMuted,
               minWidth: '160px',
               boxSizing: 'border-box'
             }}
@@ -321,18 +359,18 @@ export default function AHTMonitoringAdmin() {
 
         {/* Cluster Dropdown Filter */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Layers size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <Layers size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
           <select 
             value={filterCluster} 
             onChange={(e) => setFilterCluster(e.target.value)}
             style={{ 
               padding: '8px 12px 8px 32px', 
               borderRadius: '6px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               outline: 'none', 
-              background: '#fff', 
+              background: theme.inputBg, 
               fontSize: '13px',
-              color: filterCluster ? '#0f172a' : '#64748b',
+              color: filterCluster ? theme.textMain : theme.textMuted,
               minWidth: '150px',
               boxSizing: 'border-box'
             }}
@@ -346,7 +384,7 @@ export default function AHTMonitoringAdmin() {
 
         {/* Date Filter */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+          <Calendar size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
           <input 
             type="date"
             value={filterDate}
@@ -354,11 +392,11 @@ export default function AHTMonitoringAdmin() {
             style={{ 
               padding: '7px 12px 7px 32px', 
               borderRadius: '6px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               fontSize: '13px', 
               outline: 'none',
-              color: filterDate ? '#0f172a' : '#64748b',
-              background: '#fff',
+              color: filterDate ? theme.textMain : theme.textMuted,
+              background: theme.inputBg,
               boxSizing: 'border-box'
             }}
           />
@@ -366,16 +404,16 @@ export default function AHTMonitoringAdmin() {
             <button 
               onClick={() => setFilterDate('')}
               title="Clear Date Filter"
-              style={{ marginLeft: '6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
+              style={{ marginLeft: '6px', background: isDarkMode ? '#334155' : '#f1f5f9', border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
             >
-              <X size={13} color="#64748b" />
+              <X size={13} color={theme.textMuted} />
             </button>
           )}
         </div>
 
         {/* Search Bar */}
         <div style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
-          <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input 
             type="text"
             placeholder="Search records..."
@@ -385,17 +423,18 @@ export default function AHTMonitoringAdmin() {
               width: '100%', 
               padding: '8px 12px 8px 32px', 
               borderRadius: '6px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               fontSize: '13px', 
               outline: 'none',
               boxSizing: 'border-box',
-              background: '#fff'
+              background: theme.inputBg,
+              color: theme.inputText
             }}
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')} 
-              style={{ background: 'none', border: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#64748b' }}
+              style={{ background: 'none', border: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: theme.textMuted }}
             >
               <X size={13} />
             </button>
@@ -405,11 +444,11 @@ export default function AHTMonitoringAdmin() {
       </div>
 
       {/* Scrollable Table Container */}
-      <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', border: `1px solid ${theme.border}`, borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '950px' }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
-            <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
-              <th style={{ padding: '12px 16px', background: '#f8fafc', width: '40px', textAlign: 'center' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.theadBg }}>
+            <tr style={{ borderBottom: `1px solid ${theme.border}`, color: theme.textMuted }}>
+              <th style={{ padding: '12px 16px', background: theme.theadBg, width: '40px', textAlign: 'center' }}>
                 <input 
                   type="checkbox"
                   checked={isAllPaginatedSelected}
@@ -417,29 +456,29 @@ export default function AHTMonitoringAdmin() {
                   style={{ cursor: 'pointer', width: '15px', height: '15px' }}
                 />
               </th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>No.</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>EID</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Name</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Department</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Cluster</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Input</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Start Time</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>End Time</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>AHT</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Created At</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>No.</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>EID</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Name</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Department</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Cluster</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Input</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Start Time</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>End Time</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>AHT</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Created At</th>
+              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
                   Loading enterprise records...
                 </td>
               </tr>
             ) : paginatedLogs.length === 0 ? (
               <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
                   {logs.length === 0 
                     ? 'No tracking activity logged across any employee accounts yet.' 
                     : 'No system logs match your selected filter criteria.'}
@@ -449,7 +488,7 @@ export default function AHTMonitoringAdmin() {
               paginatedLogs.map((log) => {
                 const isSelected = selectedIds.includes(log.id);
                 return (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0fdf4' : 'transparent', transition: 'background 0.15s' }}>
+                  <tr key={log.id} style={{ borderBottom: `1px solid ${theme.borderLight}`, background: isSelected ? theme.selectedRowBg : 'transparent', transition: 'background 0.15s' }}>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <input 
                         type="checkbox"
@@ -458,22 +497,22 @@ export default function AHTMonitoringAdmin() {
                         style={{ cursor: 'pointer', width: '15px', height: '15px' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.department, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.cluster, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.number}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{highlightText(log.name, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{highlightText(log.department, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{highlightText(log.cluster, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.start_time}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.end_time}</td>
                     <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>{log.created_at}</td>
+                    <td style={{ padding: '12px 16px', color: theme.textMuted, fontSize: '12px' }}>{log.created_at}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <button 
                         onClick={() => openSingleDeleteModal(log)}
                         style={{ 
-                          background: '#fef2f2', 
-                          border: '1px solid #fecaca', 
+                          background: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#fef2f2', 
+                          border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, 
                           color: '#dc2626', 
                           padding: '6px 10px', 
                           borderRadius: '6px', 
@@ -497,7 +536,7 @@ export default function AHTMonitoringAdmin() {
       </div>
 
       {/* Pagination and Range Selector Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: '#475569' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: theme.textMuted }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span>Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries</span>
           {filteredLogs.length !== logs.length && <span>(filtered from {logs.length} total system entries)</span>}
@@ -509,7 +548,7 @@ export default function AHTMonitoringAdmin() {
             <select 
               value={itemsPerPage} 
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#fff', fontSize: '13px' }}
+              style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${theme.inputBorder}`, outline: 'none', background: theme.inputBg, color: theme.inputText, fontSize: '13px' }}
             >
               <option value={10}>10</option>
               <option value={15}>15</option>
@@ -526,9 +565,9 @@ export default function AHTMonitoringAdmin() {
               style={{ 
                 padding: '6px 10px', 
                 borderRadius: '6px', 
-                border: '1px solid #cbd5e1', 
-                background: currentPage === 1 ? '#f1f5f9' : '#fff', 
-                color: currentPage === 1 ? '#94a3b8' : '#334155', 
+                border: `1px solid ${theme.inputBorder}`, 
+                background: currentPage === 1 ? (isDarkMode ? '#334155' : '#f1f5f9') : theme.inputBg, 
+                color: currentPage === 1 ? theme.textMuted : theme.textMain, 
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -538,7 +577,7 @@ export default function AHTMonitoringAdmin() {
               <ChevronLeft size={15} /> Prev
             </button>
 
-            <span style={{ fontWeight: '600', color: '#0f172a' }}>
+            <span style={{ fontWeight: '600', color: theme.textMain }}>
               {currentPage}/{totalPages || 1}
             </span>
 
@@ -548,9 +587,9 @@ export default function AHTMonitoringAdmin() {
               style={{ 
                 padding: '6px 10px', 
                 borderRadius: '6px', 
-                border: '1px solid #cbd5e1', 
-                background: (currentPage === totalPages || totalPages === 0) ? '#f1f5f9' : '#fff', 
-                color: (currentPage === totalPages || totalPages === 0) ? '#94a3b8' : '#334155', 
+                border: `1px solid ${theme.inputBorder}`, 
+                background: (currentPage === totalPages || totalPages === 0) ? (isDarkMode ? '#334155' : '#f1f5f9') : theme.inputBg, 
+                color: (currentPage === totalPages || totalPages === 0) ? theme.textMuted : theme.textMain, 
                 cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -571,7 +610,7 @@ export default function AHTMonitoringAdmin() {
           left: 0,
           width: '100%',
           height: '100%',
-          background: 'rgba(15, 23, 42, 0.5)',
+          background: 'rgba(15, 23, 42, 0.6)',
           backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
@@ -580,12 +619,12 @@ export default function AHTMonitoringAdmin() {
           padding: '20px'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: theme.modalBg,
             borderRadius: '20px',
             width: '100%',
             maxWidth: '440px',
-            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
-            border: '1px solid #e2e8f0',
+            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.3)',
+            border: `1px solid ${theme.border}`,
             overflow: 'hidden',
             boxSizing: 'border-box',
             textAlign: 'center',
@@ -594,23 +633,23 @@ export default function AHTMonitoringAdmin() {
             <div style={{ 
               width: '54px', 
               height: '54px', 
-              background: '#fef2f2', 
+              background: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#fef2f2', 
               color: '#dc2626', 
               borderRadius: '50%', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               margin: '0 auto 18px auto',
-              border: '1px solid #fecaca'
+              border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`
             }}>
               <AlertTriangle size={26} />
             </div>
 
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: theme.textMain }}>
               {targetDeleteLog ? 'Delete AHT Log Entry?' : `Delete ${selectedIds.length} Selected Records?`}
             </h3>
 
-            <p style={{ margin: '0 0 24px 0', fontSize: '13.5px', color: '#64748b', lineHeight: '1.5' }}>
+            <p style={{ margin: '0 0 24px 0', fontSize: '13.5px', color: theme.textMuted, lineHeight: '1.5' }}>
               {targetDeleteLog 
                 ? `You are about to remove the tracking record for ${targetDeleteLog.name} (${targetDeleteLog.eid}). This action cannot be undone.`
                 : `You are about to delete ${selectedIds.length} checked AHT monitoring logs permanently from the database. This action cannot be undone.`
@@ -625,11 +664,11 @@ export default function AHTMonitoringAdmin() {
                 style={{ 
                   flex: 1, 
                   padding: '11px', 
-                  background: '#f1f5f9', 
-                  border: '1px solid #cbd5e1', 
+                  background: isDarkMode ? '#334155' : '#f1f5f9', 
+                  border: `1px solid ${theme.inputBorder}`, 
                   borderRadius: '10px', 
                   fontWeight: '600', 
-                  color: '#475569', 
+                  color: isDarkMode ? '#f8fafc' : '#475569', 
                   cursor: 'pointer', 
                   fontSize: '14px' 
                 }}

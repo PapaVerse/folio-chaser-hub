@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
-export default function ScheduleEmployee() {
+export default function ScheduleEmployee({ isDarkMode }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,34 +44,57 @@ export default function ScheduleEmployee() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
+    headerIconBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
+    headerIconColor: isDarkMode ? '#93c5fd' : '#2563eb',
+    navBtnBg: isDarkMode ? '#334155' : '#f1f5f9',
+    navBtnColor: isDarkMode ? '#cbd5e1' : '#334155',
+    weekdayColor: isDarkMode ? '#94a3b8' : '#64748b',
+    weekendColor: isDarkMode ? '#64748b' : '#94a3b8',
+    emptyDayBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    dayDefaultBg: isDarkMode ? '#1e293b' : '#ffffff',
+    dayWeekendBg: isDarkMode ? '#1a2332' : '#f8fafc',
+    dayTodayBg: isDarkMode ? '#172554' : '#eff6ff',
+    dayTodayBorder: isDarkMode ? '#3b82f6' : '#2563eb',
+    dayTodayText: isDarkMode ? '#93c5fd' : '#2563eb',
+    dayNormalText: isDarkMode ? '#f8fafc' : '#0f172a',
+    badgeBg: isDarkMode ? '#334155' : '#e2e8f0',
+    badgeColor: isDarkMode ? '#cbd5e1' : '#334155',
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
       
       {/* Header Info */}
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+      <div style={{ background: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '10px', color: '#2563eb' }}>
+          <div style={{ background: theme.headerIconBg, padding: '10px', borderRadius: '10px', color: theme.headerIconColor }}>
             <CalendarIcon size={22} />
           </div>
           <div>
-            <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>Cluster Schedule & Events</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>View plotted company deadlines, shifts, and scheduled events.</p>
+            <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: theme.titleMain }}>Cluster Schedule & Events</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.titleSub }}>View plotted company deadlines, shifts, and scheduled events.</p>
           </div>
         </div>
       </div>
 
       {/* Calendar Grid Container */}
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+      <div style={{ background: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
         
         {/* Month Header controls */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: theme.titleMain }}>
             {monthNames[month]} {year}
           </h3>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={prevMonth} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Prev</button>
-            <button onClick={() => setCurrentDate(new Date())} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Today</button>
-            <button onClick={nextMonth} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Next</button>
+            <button onClick={prevMonth} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Prev</button>
+            <button onClick={() => setCurrentDate(new Date())} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Today</button>
+            <button onClick={nextMonth} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Next</button>
           </div>
         </div>
 
@@ -83,7 +106,7 @@ export default function ScheduleEmployee() {
               style={{ 
                 fontSize: '11px', 
                 fontWeight: '800', 
-                color: (index === 0 || index === 6) ? '#94a3b8' : '#64748b', 
+                color: (index === 0 || index === 6) ? theme.weekendColor : theme.weekdayColor, 
                 textTransform: 'uppercase' 
               }}
             >
@@ -96,7 +119,7 @@ export default function ScheduleEmployee() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
           {/* Blank spaces for preceding days */}
           {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-            <div key={`empty-${index}`} style={{ minHeight: '100px', background: '#f8fafc', borderRadius: '8px', opacity: 0.4 }} />
+            <div key={`empty-${index}`} style={{ minHeight: '100px', background: theme.emptyDayBg, borderRadius: '8px', opacity: 0.4 }} />
           ))}
 
           {/* Actual days of the month */}
@@ -114,9 +137,9 @@ export default function ScheduleEmployee() {
             const isToday = new Date().toISOString().split('T')[0] === dateString;
 
             const getBackground = () => {
-              if (isToday) return '#eff6ff';
-              if (isWeekend) return '#f8fafc';
-              return '#ffffff';
+              if (isToday) return theme.dayTodayBg;
+              if (isWeekend) return theme.dayWeekendBg;
+              return theme.dayDefaultBg;
             };
 
             return (
@@ -125,7 +148,7 @@ export default function ScheduleEmployee() {
                 style={{ 
                   minHeight: '110px', 
                   background: getBackground(), 
-                  border: isToday ? '2px solid #2563eb' : '1px solid #e2e8f0', 
+                  border: isToday ? `2px solid ${theme.dayTodayBorder}` : `1px solid ${theme.cardBorder}`, 
                   borderRadius: '10px', 
                   padding: '8px', 
                   display: 'flex', 
@@ -136,9 +159,9 @@ export default function ScheduleEmployee() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: isToday ? '#2563eb' : isWeekend ? '#64748b' : '#0f172a' }}>{dayNum}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: isToday ? theme.dayTodayText : isWeekend ? theme.titleSub : theme.dayNormalText }}>{dayNum}</span>
                   {dayEvents.length > 0 && (
-                    <span style={{ fontSize: '9px', fontWeight: '800', background: '#e2e8f0', color: '#334155', padding: '1px 5px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: '800', background: theme.badgeBg, color: theme.badgeColor, padding: '1px 5px', borderRadius: '4px' }}>
                       {dayEvents.length}
                     </span>
                   )}
@@ -158,7 +181,7 @@ export default function ScheduleEmployee() {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '2px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0,0,0,0.1)'
                       }}
                     >
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</span>

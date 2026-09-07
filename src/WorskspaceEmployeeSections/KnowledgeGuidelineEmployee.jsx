@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { BookOpen, FileText, Calendar, User, Download, FileSpreadsheet, Presentation, Search, Edit3, X, Upload, CheckCircle2, Link as LinkIcon } from 'lucide-react';
 
-export default function KnowledgeGuidelineEmployee({ currentUser }) {
+export default function KnowledgeGuidelineEmployee({ currentUser, isDarkMode }) {
   const [documents, setDocuments] = useState([]);
   const [departmentsList, setDepartmentsList] = useState([]);
   const [activeTab, setActiveTab] = useState('');
@@ -17,6 +17,35 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
   const [updating, setUpdating] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [fileError, setFileError] = useState('');
+
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
+    inputBg: isDarkMode ? '#0f172a' : '#ffffff',
+    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
+    inputColor: isDarkMode ? '#f8fafc' : '#0f172a',
+    tabBgActive: isDarkMode ? '#172554' : '#eff6ff',
+    tabBorderActive: isDarkMode ? '#1e3a8a' : '#bfdbfe',
+    tabColorActive: isDarkMode ? '#93c5fd' : '#2563eb',
+    tabCountBgActive: isDarkMode ? '#1e3a8a' : '#dbeafe',
+    tabCountColorActive: isDarkMode ? '#bfdbfe' : '#1d4ed8',
+    tabBgInactive: isDarkMode ? '#0f172a' : '#f1f5f9',
+    tabColorInactive: isDarkMode ? '#94a3b8' : '#64748b',
+    docCardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    docCardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    docIconBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    docIconBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    badgeBg: isDarkMode ? '#0f172a' : '#f1f5f9',
+    badgeColor: isDarkMode ? '#cbd5e1' : '#475569',
+    dividerColor: isDarkMode ? '#334155' : '#f1f5f9',
+    modalBg: isDarkMode ? '#1e293b' : '#ffffff',
+    modalBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    dropzoneBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    dropzoneBorder: isDarkMode ? '#475569' : '#cbd5e1',
+  };
 
   useEffect(() => {
     fetchData();
@@ -101,7 +130,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
 
     setFileError('');
     setSelectedFile(file);
-    setExternalUrl(''); // Clear link input if file is chosen
+    setExternalUrl('');
   };
 
   const handleUpdateSubmit = async (e) => {
@@ -176,15 +205,15 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
   });
 
   return (
-    <div style={{ background: '#ffffff', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', minHeight: '600px', boxSizing: 'border-box', position: 'relative' }}>
+    <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, minHeight: '600px', boxSizing: 'border-box', position: 'relative', width: '100%', overflowX: 'hidden' }}>
       
       {/* Header & Search */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BookOpen size={20} color="#2563eb" /> Knowledge Base & SOP Guidelines
+          <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BookOpen size={20} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> Knowledge Base & SOP Guidelines
           </h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Access standard operating procedures, documentation, and update guideline versions.</p>
+          <p style={{ margin: 0, fontSize: '13px', color: theme.titleSub }}>Access standard operating procedures, documentation, and update guideline versions.</p>
         </div>
 
         <div style={{ position: 'relative', width: '260px' }}>
@@ -194,20 +223,20 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
             placeholder="Search guidelines..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', boxSizing: 'border-box', background: theme.inputBg, color: theme.inputColor }}
           />
         </div>
       </div>
 
       {/* Department Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${theme.cardBorder}`, marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
         <button
           onClick={() => setActiveTab('All')}
           style={{
             padding: '10px 16px',
-            background: activeTab === 'All' ? '#eff6ff' : 'transparent',
-            color: activeTab === 'All' ? '#2563eb' : '#64748b',
-            border: activeTab === 'All' ? '1px solid #bfdbfe' : '1px solid transparent',
+            background: activeTab === 'All' ? theme.tabBgActive : 'transparent',
+            color: activeTab === 'All' ? theme.tabColorActive : theme.titleSub,
+            border: activeTab === 'All' ? `1px solid ${theme.tabBorderActive}` : '1px solid transparent',
             borderRadius: '8px',
             fontWeight: '600',
             fontSize: '13px',
@@ -219,7 +248,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
           }}
         >
           <span>All Departments</span>
-          <span style={{ background: activeTab === 'All' ? '#dbeafe' : '#f1f5f9', color: activeTab === 'All' ? '#1d4ed8' : '#64748b', padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+          <span style={{ background: activeTab === 'All' ? theme.tabCountBgActive : theme.tabBgInactive, color: activeTab === 'All' ? theme.tabCountColorActive : theme.titleSub, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
             {documents.length}
           </span>
         </button>
@@ -233,9 +262,9 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
               onClick={() => setActiveTab(dept)}
               style={{
                 padding: '10px 16px',
-                background: isActive ? '#eff6ff' : 'transparent',
-                color: isActive ? '#2563eb' : '#64748b',
-                border: isActive ? '1px solid #bfdbfe' : '1px solid transparent',
+                background: isActive ? theme.tabBgActive : 'transparent',
+                color: isActive ? theme.tabColorActive : theme.titleSub,
+                border: isActive ? `1px solid ${theme.tabBorderActive}` : '1px solid transparent',
                 borderRadius: '8px',
                 fontWeight: '600',
                 fontSize: '13px',
@@ -247,7 +276,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
               }}
             >
               <span>{dept}</span>
-              <span style={{ background: isActive ? '#dbeafe' : '#f1f5f9', color: isActive ? '#1d4ed8' : '#64748b', padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+              <span style={{ background: isActive ? theme.tabCountBgActive : theme.tabBgInactive, color: isActive ? theme.tabCountColorActive : theme.titleSub, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
                 {count}
               </span>
             </button>
@@ -257,32 +286,32 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
 
       {/* Documents Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#64748b', fontSize: '14px' }}>Loading guidelines...</div>
+        <div style={{ textAlign: 'center', padding: '60px', color: theme.titleSub, fontSize: '14px' }}>Loading guidelines...</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
           {filteredDocs.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: '#94a3b8', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: theme.titleSub, background: theme.tabBgInactive, borderRadius: '12px', border: `1px dashed ${theme.inputBorder}` }}>
               <BookOpen size={36} color="#cbd5e1" style={{ marginBottom: '10px' }} />
-              <p style={{ margin: '0 0 4px 0', fontWeight: '600', fontSize: '14px', color: '#475569' }}>No guidelines found</p>
+              <p style={{ margin: '0 0 4px 0', fontWeight: '600', fontSize: '14px', color: theme.titleMain }}>No guidelines found</p>
               <p style={{ margin: 0, fontSize: '12px' }}>Try adjusting your search or selecting a different department tab.</p>
             </div>
           ) : (
             filteredDocs.map((doc) => {
               const isExternalLink = doc.file_url && !doc.file_url.includes('guidelines') && !doc.file_url.includes('documents');
               return (
-                <div key={doc.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                <div key={doc.id} style={{ background: theme.docCardBg, border: `1px solid ${theme.docCardBorder}`, borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: theme.docIconBg, border: `1px solid ${theme.docIconBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
                         {getFileIcon(doc.file_name, doc.file_url)}
                       </div>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', background: theme.badgeBg, color: theme.badgeColor, padding: '4px 8px', borderRadius: '6px' }}>
                           {doc.department}
                         </span>
                         <button
                           onClick={() => handleOpenEdit(doc)}
-                          style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '600', color: '#2563eb' }}
+                          style={{ background: theme.badgeBg, border: `1px solid ${theme.inputBorder}`, borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '600', color: isDarkMode ? '#93c5fd' : '#2563eb' }}
                           title="Update Title / Replace File Version"
                         >
                           <Edit3 size={13} /> Edit
@@ -290,20 +319,20 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                       </div>
                     </div>
 
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: theme.titleMain, lineHeight: '1.4', wordBreak: 'break-word' }}>
                       {highlightMatch(doc.title, searchTerm)}
                     </h3>
                     
-                    <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b', wordBreak: 'break-all' }}>
+                    <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: theme.titleSub, wordBreak: 'break-all' }}>
                       {isExternalLink ? `🔗 ${highlightMatch(doc.file_url, searchTerm)}` : `📁 ${highlightMatch(doc.file_name || 'Attached File', searchTerm)}`}
                     </p>
                   </div>
 
                   <div>
-                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#64748b' }}>
+                    <div style={{ borderTop: `1px solid ${theme.dividerColor}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: theme.titleSub }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <User size={12} color="#94a3b8" />
-                        <span>Updated by <strong>{doc.uploaded_by || 'Administrator'}</strong></span>
+                        <span>Updated by <strong style={{ color: theme.titleMain }}>{doc.uploaded_by || 'Administrator'}</strong></span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Calendar size={12} color="#94a3b8" />
@@ -316,7 +345,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                         href={doc.file_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: isExternalLink ? '#fdf4ff' : '#eff6ff', color: isExternalLink ? '#c026d3' : '#2563eb', border: `1px solid ${isExternalLink ? '#f5d0fe' : '#bfdbfe'}`, borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
+                        style={{ marginTop: '14px', width: '100%', padding: '8px 12px', background: isExternalLink ? (isDarkMode ? '#3b0764' : '#fdf4ff') : (isDarkMode ? '#172554' : '#eff6ff'), color: isExternalLink ? (isDarkMode ? '#e879f9' : '#c026d3') : (isDarkMode ? '#93c5fd' : '#2563eb'), border: `1px solid ${isExternalLink ? (isDarkMode ? '#701a75' : '#f5d0fe') : (isDarkMode ? '#1e3a8a' : '#bfdbfe')}`, borderRadius: '6px', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', boxSizing: 'border-box' }}
                       >
                         {isExternalLink ? <LinkIcon size={13} /> : <Download size={13} />}
                         {isExternalLink ? 'Open External Link' : 'View / Download File'}
@@ -333,28 +362,28 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
       {/* Edit / Replace Modal */}
       {editingDoc && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(2px)' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
+          <div style={{ background: theme.modalBg, borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: `1px solid ${theme.modalBorder}`, boxSizing: 'border-box' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Edit3 size={18} color="#2563eb" /> Update Guideline & File
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit3 size={18} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> Update Guideline & File
               </h3>
               <button 
                 onClick={() => setEditingDoc(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569' }}
+                style={{ background: theme.tabBgInactive, border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: theme.titleSub }}
               >
                 <X size={16} />
               </button>
             </div>
 
             {successMessage ? (
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', padding: '16px', borderRadius: '8px', textAlign: 'center', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{ background: isDarkMode ? '#064e3b' : '#f0fdf4', border: `1px solid ${isDarkMode ? '#065f46' : '#bbf7d0'}`, color: isDarkMode ? '#34d399' : '#16a34a', padding: '16px', borderRadius: '8px', textAlign: 'center', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <CheckCircle2 size={18} /> {successMessage}
               </div>
             ) : (
               <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.titleSub, marginBottom: '6px' }}>
                     Document Title
                   </label>
                   <input 
@@ -362,20 +391,20 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                     required
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', boxSizing: 'border-box', background: theme.inputBg, color: theme.inputColor }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.titleSub, marginBottom: '6px' }}>
                     Replace File (Supported: PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX)
                   </label>
-                  <div style={{ border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '16px', textAlign: 'center', background: '#f8fafc' }}>
+                  <div style={{ border: `2px dashed ${theme.dropzoneBorder}`, borderRadius: '8px', padding: '16px', textAlign: 'center', background: theme.dropzoneBg }}>
                     <Upload size={22} color="#64748b" style={{ marginBottom: '6px' }} />
-                    <p style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: '600', color: '#475569' }}>
+                    <p style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: '600', color: theme.titleMain }}>
                       {selectedFile ? selectedFile.name : 'Choose a new file to replace current version'}
                     </p>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#94a3b8' }}>Current: {editingDoc.file_name || 'None'}</p>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '11px', color: theme.titleSub }}>Current: {editingDoc.file_name || 'None'}</p>
                     <input 
                       type="file"
                       id="update-file-input"
@@ -385,7 +414,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                     />
                     <label 
                       htmlFor="update-file-input"
-                      style={{ display: 'inline-block', padding: '6px 12px', background: '#e0f2fe', color: '#0369a1', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                      style={{ display: 'inline-block', padding: '6px 12px', background: isDarkMode ? '#1e3a8a' : '#e0f2fe', color: isDarkMode ? '#93c5fd' : '#0369a1', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
                     >
                       Browse New File
                     </label>
@@ -394,14 +423,14 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                 </div>
 
                 {/* Divider / Choice Indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '11px', fontWeight: '600', margin: '0' }}>
-                  <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: theme.titleSub, fontSize: '11px', fontWeight: '600', margin: '0' }}>
+                  <div style={{ flex: 1, borderBottom: `1px solid ${theme.cardBorder}` }}></div>
                   <span style={{ padding: '0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or External Link URL</span>
-                  <div style={{ flex: 1, borderBottom: '1px solid #e2e8f0' }}></div>
+                  <div style={{ flex: 1, borderBottom: `1px solid ${theme.cardBorder}` }}></div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.titleSub, marginBottom: '6px' }}>
                     External Web Link (URL)
                   </label>
                   <input 
@@ -410,13 +439,13 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                     value={externalUrl}
                     onChange={(e) => {
                       setExternalUrl(e.target.value);
-                      if (e.target.value) setSelectedFile(null); // Clear selected file if URL is entered
+                      if (e.target.value) setSelectedFile(null);
                     }}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', boxSizing: 'border-box', background: theme.inputBg, color: theme.inputColor }}
                   />
                 </div>
 
-                <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '10px 12px', borderRadius: '8px', fontSize: '11px', color: '#b45309' }}>
+                <div style={{ background: isDarkMode ? '#451a03' : '#fffbeb', border: `1px solid ${isDarkMode ? '#78350f' : '#fef3c7'}`, padding: '10px 12px', borderRadius: '8px', fontSize: '11px', color: isDarkMode ? '#fcd34d' : '#b45309' }}>
                   ℹ️ Note: Deletion is restricted. You can update titles, upload new files, or link external URLs at any time.
                 </div>
 
@@ -424,7 +453,7 @@ export default function KnowledgeGuidelineEmployee({ currentUser }) {
                   <button 
                     type="button"
                     onClick={() => setEditingDoc(null)}
-                    style={{ padding: '9px 16px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#475569' }}
+                    style={{ padding: '9px 16px', background: theme.tabBgInactive, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: theme.titleSub }}
                   >
                     Cancel
                   </button>

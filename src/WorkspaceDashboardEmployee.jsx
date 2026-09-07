@@ -20,7 +20,7 @@ import KnowledgeGuidelineEmployee from './WorskspaceEmployeeSections/KnowledgeGu
 import EmployeeProfile from "./WorskspaceEmployeeSections/EmployeeProfile";
 import ScheduleEmployee from "./WorskspaceEmployeeSections/ScheduleEmployee";
 
-export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
+export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDarkMode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -53,8 +53,42 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
     }
   };
 
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    appBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    sidebarBg: isDarkMode ? '#1e293b' : '#ffffff',
+    sidebarBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    sidebarHeaderBorder: isDarkMode ? '#334155' : '#f1f5f9',
+    logoText: isDarkMode ? '#f8fafc' : '#0f172a',
+    logoSub: isDarkMode ? '#94a3b8' : '#64748b',
+    collapseBtnBg: isDarkMode ? '#334155' : '#f1f5f9',
+    collapseBtnColor: isDarkMode ? '#cbd5e1' : '#475569',
+    navActiveBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
+    navActiveColor: isDarkMode ? '#93c5fd' : '#2563eb',
+    navInactiveColor: isDarkMode ? '#94a3b8' : '#64748b',
+    headerBg: isDarkMode ? '#1e293b' : '#ffffff',
+    headerBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
+    userInfoBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    userInfoBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    userIconBg: isDarkMode ? '#1e3a8a' : '#e0f2fe',
+    userIconColor: isDarkMode ? '#93c5fd' : '#0284c7',
+    badgeBg: isDarkMode ? '#064e3b' : '#f0fdf4',
+    badgeColor: isDarkMode ? '#86efac' : '#16a34a',
+    logoutBg: isDarkMode ? '#7f1d1d' : '#fef2f2',
+    logoutBorder: isDarkMode ? '#991b1b' : '#fecaca',
+    logoutColor: isDarkMode ? '#fca5a5' : '#dc2626',
+    placeholderCardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    placeholderCardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    placeholderIconBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
+    placeholderIconColor: isDarkMode ? '#93c5fd' : '#2563eb',
+    mobileMenuBtnBg: isDarkMode ? '#334155' : '#f1f5f9',
+    mobileMenuBtnColor: isDarkMode ? '#cbd5e1' : '#475569',
+  };
+
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden', boxSizing: 'border-box', position: 'relative' }}>
+    <div style={{ display: 'flex', height: '100vh', background: theme.appBg, fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden', boxSizing: 'border-box', position: 'relative' }}>
       
       {/* Mobile Backdrop Overlay */}
       {isMobile && isMobileMenuOpen && (
@@ -73,8 +107,8 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
       {/* Sidebar Panel */}
       <div style={{ 
         width: isMobile ? '260px' : (isSidebarOpen ? '260px' : '80px'), 
-        background: '#ffffff', 
-        borderRight: '1px solid #e2e8f0', 
+        background: theme.sidebarBg, 
+        borderRight: `1px solid ${theme.sidebarBorder}`, 
         display: 'flex', 
         flexDirection: 'column', 
         transition: isMobile ? 'transform 0.3s ease' : 'width 0.3s ease',
@@ -94,14 +128,14 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'space-between', 
           flexDirection: (!isMobile && !isSidebarOpen) ? 'column' : 'row',
           gap: (!isMobile && !isSidebarOpen) ? '16px' : '0',
-          borderBottom: '1px solid #f1f5f9' 
+          borderBottom: `1px solid ${theme.sidebarHeaderBorder}` 
         }}>
           {(!isMobile && !isSidebarOpen) ? (
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>FC</h2>
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: theme.logoText, textAlign: 'center' }}>FC</h2>
           ) : (
             <div>
-              <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.025em' }}>FC HUB</h2>
-              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>Workspace</span>
+              <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: theme.logoText, letterSpacing: '-0.025em' }}>FC HUB</h2>
+              <span style={{ fontSize: '11px', color: theme.logoSub, fontWeight: '500' }}>Workspace</span>
             </div>
           )}
           
@@ -114,7 +148,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
               }
             }}
             style={{ 
-              background: '#f1f5f9', 
+              background: theme.collapseBtnBg, 
               border: 'none', 
               borderRadius: '6px', 
               width: '32px', 
@@ -123,7 +157,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
               alignItems: 'center', 
               justifyContent: 'center', 
               cursor: 'pointer', 
-              color: '#475569',
+              color: theme.collapseBtnColor,
               flexShrink: 0
             }}
             title={isMobile ? "Close Menu" : (isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar")}
@@ -138,7 +172,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* Dashboard */}
           <button 
             onClick={() => handleNavClick('dashboard')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'dashboard' ? '#eff6ff' : 'transparent', color: activeNav === 'dashboard' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'dashboard' ? theme.navActiveBg : 'transparent', color: activeNav === 'dashboard' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "Dashboard" : ""}
           >
             <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
@@ -148,7 +182,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* Schedule */}
           <button 
             onClick={() => handleNavClick('schedule')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'schedule' ? '#eff6ff' : 'transparent', color: activeNav === 'schedule' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'schedule' ? theme.navActiveBg : 'transparent', color: activeNav === 'schedule' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "Schedule" : ""}
           >
             <CalendarIcon size={18} style={{ flexShrink: 0 }} />
@@ -158,7 +192,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* AHT Monitoring */}
           <button 
             onClick={() => handleNavClick('aht-monitoring')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'aht-monitoring' ? '#eff6ff' : 'transparent', color: activeNav === 'aht-monitoring' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'aht-monitoring' ? theme.navActiveBg : 'transparent', color: activeNav === 'aht-monitoring' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "AHT Monitoring" : ""}
           >
             <Clock size={18} style={{ flexShrink: 0 }} />
@@ -168,7 +202,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* Scoreboard */}
           <button 
             onClick={() => handleNavClick('scoreboard')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'scoreboard' ? '#eff6ff' : 'transparent', color: activeNav === 'scoreboard' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'scoreboard' ? theme.navActiveBg : 'transparent', color: activeNav === 'scoreboard' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "Scoreboard" : ""}
           >
             <Award size={18} style={{ flexShrink: 0 }} />
@@ -178,7 +212,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* Guidelines / Knowledge Base */}
           <button 
             onClick={() => handleNavClick('guidelines')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'guidelines' ? '#eff6ff' : 'transparent', color: activeNav === 'guidelines' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'guidelines' ? theme.navActiveBg : 'transparent', color: activeNav === 'guidelines' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "Guidelines" : ""}
           >
             <BookOpen size={18} style={{ flexShrink: 0 }} />
@@ -188,7 +222,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
           {/* Team's Profile */}
           <button 
             onClick={() => handleNavClick('teamProfile')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'teamProfile' ? '#eff6ff' : 'transparent', color: activeNav === 'teamProfile' ? '#2563eb' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: activeNav === 'teamProfile' ? theme.navActiveBg : 'transparent', color: activeNav === 'teamProfile' ? theme.navActiveColor : theme.navInactiveColor, border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', textAlign: 'left', justifyContent: (!isMobile && !isSidebarOpen) ? 'center' : 'flex-start' }}
             title={(!isMobile && !isSidebarOpen) ? "Team's Profile" : ""}
           >
             <Layers size={18} style={{ flexShrink: 0 }} />
@@ -202,47 +236,47 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', minWidth: 0 }}>
         
         {/* Top Header */}
-        <div style={{ background: '#ffffff', padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ background: theme.headerBg, padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: `1px solid ${theme.headerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {isMobile && (
               <button 
                 onClick={() => setIsMobileMenuOpen(true)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: '0' }}
+                style={{ background: theme.mobileMenuBtnBg, border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: theme.mobileMenuBtnColor, flexShrink: '0' }}
               >
                 <Menu size={20} />
               </button>
             )}
             <div>
-              <h1 style={{ margin: '0 0 2px 0', fontSize: isMobile ? '16px' : '20px', fontWeight: '800', color: '#0f172a', textTransform: 'capitalize' }}>
+              <h1 style={{ margin: '0 0 2px 0', fontSize: isMobile ? '16px' : '20px', fontWeight: '800', color: theme.titleMain, textTransform: 'capitalize' }}>
                 {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : (activeNav === 'guidelines' ? 'Knowledge Base & Guidelines' : (activeNav === 'teamProfile' ? "Team's Profile" : (activeNav === 'schedule' ? 'Schedule' : activeNav)))}
               </h1>
-              {!isMobile && <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>}
+              {!isMobile && <p style={{ margin: 0, color: theme.titleSub, fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>}
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '20px', marginLeft: isMobile ? 'auto' : '0' }}>
             
             {/* User Details & Employee Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: theme.userInfoBg, padding: '6px 10px', borderRadius: '8px', border: `1px solid ${theme.userInfoBorder}` }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: theme.userIconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.userIconColor, flexShrink: 0 }}>
                 <UserIcon size={14} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', maxWidth: isMobile ? '100px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: theme.titleMain, maxWidth: isMobile ? '100px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
                   {!isMobile && (
-                    <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <span style={{ background: theme.badgeBg, color: theme.badgeColor, padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '2px' }}>
                       <UserCheck size={10} /> EMPLOYEE
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '10px', color: '#64748b' }}>{displayEid}</span>
+                <span style={{ fontSize: '10px', color: theme.titleSub }}>{displayEid}</span>
               </div>
             </div>
 
             <button 
               onClick={onLogout}
-              style={{ padding: isMobile ? '8px' : '8px 14px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+              style={{ padding: isMobile ? '8px' : '8px 14px', background: theme.logoutBg, color: theme.logoutColor, border: `1px solid ${theme.logoutBorder}`, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
               title="Sign Out"
             >
               <LogOut size={15} />
@@ -253,21 +287,21 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout }) {
 
         {/* Dynamic Panel Content Router */}
         <div style={{ padding: isMobile ? '16px' : '40px', flex: 1, boxSizing: 'border-box', overflowX: 'hidden' }}>
-          {activeNav === 'schedule' && <ScheduleEmployee currentUser={currentUser} />}
-          {activeNav === 'aht-monitoring' && <AHTMonitoringEmployee currentUser={currentUser} />}
-          {activeNav === 'guidelines' && <KnowledgeGuidelineEmployee currentUser={currentUser} />}
-          {activeNav === 'teamProfile' && <EmployeeProfile />}
+          {activeNav === 'schedule' && <ScheduleEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
+          {activeNav === 'aht-monitoring' && <AHTMonitoringEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
+          {activeNav === 'guidelines' && <KnowledgeGuidelineEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
+          {activeNav === 'teamProfile' && <EmployeeProfile isDarkMode={isDarkMode} />}
           
           {(activeNav === 'dashboard' || activeNav === 'scoreboard') && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <div style={{ background: '#ffffff', padding: '50px 20px', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'center', maxWidth: '500px', width: '100%', boxSizing: 'border-box', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
-                <div style={{ width: '48px', height: '48px', background: '#eff6ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 20px auto' }}>
+              <div style={{ background: theme.placeholderCardBg, padding: '50px 20px', borderRadius: '16px', border: `1px solid ${theme.placeholderCardBorder}`, textAlign: 'center', maxWidth: '500px', width: '100%', boxSizing: 'border-box', boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+                <div style={{ width: '48px', height: '48px', background: theme.placeholderIconBg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.placeholderIconColor, margin: '0 auto 20px auto' }}>
                   <Info size={24} />
                 </div>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a', textTransform: 'capitalize' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: theme.titleMain, textTransform: 'capitalize' }}>
                   {activeNav} Module
                 </h3>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
+                <p style={{ margin: 0, color: theme.titleSub, fontSize: '14px', lineHeight: '1.5' }}>
                   Data will display in here soon. Content for this section is currently under development.
                 </p>
               </div>

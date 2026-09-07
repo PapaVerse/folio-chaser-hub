@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter } from 'lucide-react';
 
-export default function ManageUser() {
+export default function ManageUser({ isDarkMode }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -111,6 +111,40 @@ export default function ManageUser() {
     return matchesDept && matchesCluster;
   });
 
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    modalBg: isDarkMode ? '#1e293b' : '#ffffff',
+    border: isDarkMode ? '#334155' : '#e2e8f0',
+    tableBorder: isDarkMode ? '#334155' : '#f1f5f9',
+    textMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    textMuted: isDarkMode ? '#94a3b8' : '#64748b',
+    textSub: isDarkMode ? '#cbd5e1' : '#475569',
+    labelColor: isDarkMode ? '#cbd5e1' : '#334155',
+    inputBg: isDarkMode ? '#0f172a' : '#ffffff',
+    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
+    filterBarBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    tableHeaderBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    iconBg: isDarkMode ? '#1e3a8a' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+    iconColor: isDarkMode ? '#93c5fd' : '#2563eb',
+    rowHover: isDarkMode ? '#334155' : '#f8fafc',
+    adminBadgeBg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(37, 99, 235, 0.08)',
+    adminBadgeBorder: isDarkMode ? 'rgba(59, 130, 246, 0.4)' : 'rgba(37, 99, 235, 0.15)',
+    adminBadgeText: isDarkMode ? '#93c5fd' : '#2563eb',
+    employeeBadgeBg: isDarkMode ? '#334155' : 'rgba(241, 245, 249, 1)',
+    employeeBadgeBorder: isDarkMode ? '#475569' : '#e2e8f0',
+    employeeBadgeText: isDarkMode ? '#cbd5e1' : '#475569',
+    editBtnBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
+    editBtnBorder: isDarkMode ? '#1d4ed8' : '#bfdbfe',
+    editBtnText: isDarkMode ? '#93c5fd' : '#2563eb',
+    deleteBtnBg: isDarkMode ? '#7f1d1d' : '#fef2f2',
+    deleteBtnBorder: isDarkMode ? '#991b1b' : '#fecaca',
+    deleteBtnText: isDarkMode ? '#fca5a5' : '#dc2626',
+    resetBtnBg: isDarkMode ? '#334155' : '#e2e8f0',
+    resetBtnText: isDarkMode ? '#f8fafc' : '#334155',
+    modalOverlay: isDarkMode ? 'rgba(2, 6, 23, 0.75)' : 'rgba(15, 23, 42, 0.5)',
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', width: '100%' }}>
@@ -121,36 +155,36 @@ export default function ManageUser() {
 
   return (
     <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.05)' }}>
+      <div style={{ background: theme.cardBg, borderRadius: '20px', border: `1px solid ${theme.border}`, overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 10px 25px -5px rgba(15, 23, 42, 0.05)' }}>
         
         {/* Header */}
-        <div style={{ padding: '28px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ padding: '28px 36px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)' }}>
+            <div style={{ width: '48px', height: '48px', background: theme.iconBg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.iconColor, boxShadow: isDarkMode ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.1)' }}>
               <Users size={24} />
             </div>
             <div>
-              <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.02em' }}>
+              <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: theme.textMain, letterSpacing: '-0.02em' }}>
                 Manage Users ({filteredUsers.length} of {users.length})
               </h2>
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '500' }}>View and maintain all active workspace & tool user accounts</p>
+              <p style={{ margin: 0, fontSize: '13px', color: theme.textMuted, fontWeight: '500' }}>View and maintain all active workspace & tool user accounts</p>
             </div>
           </div>
         </div>
 
         {/* Filter Controls Bar */}
-        <div style={{ background: '#f8fafc', padding: '16px 36px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            <Filter size={16} color="#2563eb" />
+        <div style={{ background: theme.filterBarBg, padding: '16px 36px', borderBottom: `1px solid ${theme.border}`, display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.textSub, fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <Filter size={16} color={theme.iconColor} />
             <span>Filter By:</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '220px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Department:</label>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: theme.textMuted, whiteSpace: 'nowrap' }}>Department:</label>
             <select 
               value={selectedDepartment} 
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#1e293b', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.textMain, fontSize: '13px', outline: 'none', cursor: 'pointer' }}
             >
               {departments.map((dept) => (
                 <option key={dept} value={dept}>{dept === 'ALL' ? 'All Departments' : dept}</option>
@@ -159,11 +193,11 @@ export default function ManageUser() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '220px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap' }}>Cluster:</label>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: theme.textMuted, whiteSpace: 'nowrap' }}>Cluster:</label>
             <select 
               value={selectedCluster} 
               onChange={(e) => setSelectedCluster(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#1e293b', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.textMain, fontSize: '13px', outline: 'none', cursor: 'pointer' }}
             >
               {clusters.map((cluster) => (
                 <option key={cluster} value={cluster}>{cluster === 'ALL' ? 'All Clusters' : cluster}</option>
@@ -175,7 +209,7 @@ export default function ManageUser() {
             <button 
               type="button"
               onClick={() => { setSelectedDepartment('ALL'); setSelectedCluster('ALL'); }}
-              style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#334155' }}
+              style={{ padding: '8px 14px', background: theme.resetBtnBg, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: theme.resetBtnText }}
             >
               Reset Filters
             </button>
@@ -186,7 +220,7 @@ export default function ManageUser() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <tr style={{ background: theme.tableHeaderBg, borderBottom: `1px solid ${theme.border}`, color: theme.textSub, fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <th style={{ padding: '16px 24px' }}>Employee Name</th>
                 <th style={{ padding: '16px 24px' }}>EID</th>
                 <th style={{ padding: '16px 24px' }}>Department</th>
@@ -198,23 +232,23 @@ export default function ManageUser() {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: theme.textMuted }}>
                     No users found matching the selected filters.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '18px 24px', fontWeight: '600', color: '#0f172a' }}>
+                  <tr key={u.id} style={{ borderBottom: `1px solid ${theme.tableBorder}`, transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = theme.rowHover} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '18px 24px', fontWeight: '600', color: theme.textMain }}>
                       {u.employee_name || 'N/A'}
                     </td>
-                    <td style={{ padding: '18px 24px', color: '#64748b', fontFamily: 'monospace', fontWeight: '600' }}>
+                    <td style={{ padding: '18px 24px', color: theme.textMuted, fontFamily: 'monospace', fontWeight: '600' }}>
                       {u.eid}
                     </td>
-                    <td style={{ padding: '18px 24px', color: '#475569', fontWeight: '500' }}>
+                    <td style={{ padding: '18px 24px', color: theme.textSub, fontWeight: '500' }}>
                       {u.department || '—'}
                     </td>
-                    <td style={{ padding: '18px 24px', color: '#475569', fontWeight: '500' }}>
+                    <td style={{ padding: '18px 24px', color: theme.textSub, fontWeight: '500' }}>
                       {u.cluster || '—'}
                     </td>
                     <td style={{ padding: '18px 24px' }}>
@@ -226,9 +260,9 @@ export default function ManageUser() {
                         borderRadius: '20px', 
                         fontSize: '11px', 
                         fontWeight: '700',
-                        background: u.role === 'admin' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(241, 245, 249, 1)',
-                        color: u.role === 'admin' ? '#2563eb' : '#475569',
-                        border: u.role === 'admin' ? '1px solid rgba(37, 99, 235, 0.15)' : '1px solid #e2e8f0'
+                        background: u.role === 'admin' ? theme.adminBadgeBg : theme.employeeBadgeBg,
+                        color: u.role === 'admin' ? theme.adminBadgeText : theme.employeeBadgeText,
+                        border: u.role === 'admin' ? `1px solid ${theme.adminBadgeBorder}` : `1px solid ${theme.employeeBadgeBorder}`
                       }}>
                         {u.role === 'admin' ? <Shield size={12} /> : <User size={12} />}
                         <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
@@ -238,14 +272,14 @@ export default function ManageUser() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                         <button 
                           onClick={() => handleOpenEdit(u)}
-                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                          style={{ background: theme.editBtnBg, border: `1px solid ${theme.editBtnBorder}`, color: theme.editBtnText, padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
                         >
                           <Edit3 size={14} />
                           <span>Edit</span>
                         </button>
                         <button 
                           onClick={() => handleDelete(u.id)}
-                          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
+                          style={{ background: theme.deleteBtnBg, border: `1px solid ${theme.deleteBtnBorder}`, color: theme.deleteBtnText, padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
                         >
                           <Trash2 size={14} />
                           <span>Delete</span>
@@ -268,7 +302,7 @@ export default function ManageUser() {
           left: 0,
           width: '100%',
           height: '100%',
-          background: 'rgba(15, 23, 42, 0.5)',
+          background: theme.modalOverlay,
           backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
@@ -277,32 +311,32 @@ export default function ManageUser() {
           padding: '20px'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: theme.modalBg,
             borderRadius: '20px',
             width: '100%',
             maxWidth: '520px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
-            border: '1px solid #e2e8f0',
+            boxShadow: isDarkMode ? '0 20px 40px -15px rgba(0, 0, 0, 0.5)' : '0 20px 40px -15px rgba(15, 23, 42, 0.2)',
+            border: `1px solid ${theme.border}`,
             boxSizing: 'border-box'
           }}>
             {/* Modal Header */}
-            <div style={{ padding: '24px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '24px 28px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', background: '#eff6ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                <div style={{ width: '40px', height: '40px', background: theme.iconBg, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.iconColor }}>
                   <Edit3 size={20} />
                 </div>
                 <div>
-                  <h3 style={{ margin: '0 0 2px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Edit User Profile</h3>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Modify credentials for {editingUser.employee_name}</p>
+                  <h3 style={{ margin: '0 0 2px 0', fontSize: '18px', fontWeight: '700', color: theme.textMain }}>Edit User Profile</h3>
+                  <p style={{ margin: 0, fontSize: '13px', color: theme.textMuted }}>Modify credentials for {editingUser.employee_name}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setEditingUser(null)}
-                style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                style={{ background: isDarkMode ? '#334155' : '#f1f5f9', border: 'none', cursor: 'pointer', color: theme.textMuted, width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = isDarkMode ? '#475569' : '#e2e8f0'}
+                onMouseLeave={(e) => e.currentTarget.style.background = isDarkMode ? '#334155' : '#f1f5f9'}
               >
                 <X size={18} />
               </button>
@@ -312,21 +346,21 @@ export default function ManageUser() {
             <form onSubmit={handleUpdateUser} style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
               
               {successMessage && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isDarkMode ? '#064e3b' : '#f0fdf4', border: `1px solid ${isDarkMode ? '#065f46' : '#bbf7d0'}`, color: isDarkMode ? '#86efac' : '#16a34a', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
                   <CheckCircle2 size={18} />
                   <span>{successMessage}</span>
                 </div>
               )}
 
               {errorMessage && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isDarkMode ? '#7f1d1d' : '#fef2f2', border: `1px solid ${isDarkMode ? '#991b1b' : '#fecaca'}`, color: isDarkMode ? '#fca5a5' : '#dc2626', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500' }}>
                   <AlertCircle size={18} />
                   <span>{errorMessage}</span>
                 </div>
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Employee ID (EID)
                 </label>
                 <input 
@@ -334,12 +368,12 @@ export default function ManageUser() {
                   value={editEid} 
                   onChange={(e) => setEditEid(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: theme.inputBg, color: theme.textMain }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Employee Full Name
                 </label>
                 <input 
@@ -347,12 +381,12 @@ export default function ManageUser() {
                   value={editEmployeeName} 
                   onChange={(e) => setEditEmployeeName(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: theme.inputBg, color: theme.textMain }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Password
                 </label>
                 <input 
@@ -360,13 +394,13 @@ export default function ManageUser() {
                   value={editPassword} 
                   onChange={(e) => setEditPassword(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: theme.inputBg, color: theme.textMain }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Department
                   </label>
                   <input 
@@ -374,12 +408,12 @@ export default function ManageUser() {
                     value={editDepartment} 
                     onChange={(e) => setEditDepartment(e.target.value)} 
                     placeholder="e.g., Operations" 
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: theme.inputBg, color: theme.textMain }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Cluster
                   </label>
                   <input 
@@ -387,19 +421,19 @@ export default function ManageUser() {
                     value={editCluster} 
                     onChange={(e) => setEditCluster(e.target.value)} 
                     placeholder="e.g., Cluster A" 
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', outline: 'none', background: theme.inputBg, color: theme.textMain }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.labelColor, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Access Role
                 </label>
                 <select 
                   value={editRole} 
                   onChange={(e) => setEditRole(e.target.value)}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box', background: '#ffffff', outline: 'none', cursor: 'pointer' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1px solid ${theme.inputBorder}`, fontSize: '14px', boxSizing: 'border-box', background: theme.inputBg, color: theme.textMain, outline: 'none', cursor: 'pointer' }}
                 >
                   <option value="employee">Employee</option>
                   <option value="admin">Admin</option>
@@ -410,7 +444,7 @@ export default function ManageUser() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '600', color: '#475569', cursor: 'pointer', fontSize: '14px' }}
+                  style={{ flex: 1, padding: '12px', background: isDarkMode ? '#334155' : '#f1f5f9', border: `1px solid ${theme.inputBorder}`, borderRadius: '10px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#475569', cursor: 'pointer', fontSize: '14px' }}
                 >
                   Cancel
                 </button>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Calendar as CalendarIcon, Plus, Trash2, Edit3, Palette, X, Clock, AlertCircle } from 'lucide-react';
 
-export default function ScheduleAdmin() {
+export default function ScheduleAdmin({ isDarkMode }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -20,6 +20,28 @@ export default function ScheduleAdmin() {
 
   // Calendar navigation states
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Theme helper definitions
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    border: isDarkMode ? '#334155' : '#e2e8f0',
+    borderLight: isDarkMode ? '#334155' : '#f1f5f9',
+    textMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    textMuted: isDarkMode ? '#94a3b8' : '#64748b',
+    itemBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    weekendBg: isDarkMode ? '#111827' : '#f8fafc',
+    todayBg: isDarkMode ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
+    modalBg: isDarkMode ? '#1e293b' : '#fff',
+    inputBg: isDarkMode ? '#0f172a' : '#fff',
+    inputBorder: isDarkMode ? '#334155' : '#cbd5e1',
+    inputText: isDarkMode ? '#f8fafc' : '#0f172a',
+    badgeBg: isDarkMode ? '#334155' : '#e2e8f0',
+    badgeText: isDarkMode ? '#f8fafc' : '#334155',
+    navBtnBg: isDarkMode ? '#334155' : '#f1f5f9',
+    navBtnColor: isDarkMode ? '#f8fafc' : '#334155',
+    emptyCellBg: isDarkMode ? '#111827' : '#f8fafc',
+    iconBoxBg: isDarkMode ? 'rgba(37, 99, 235, 0.25)' : '#eff6ff'
+  };
 
   const fetchEvents = async () => {
     try {
@@ -39,6 +61,17 @@ export default function ScheduleAdmin() {
 
   useEffect(() => {
     fetchEvents();
+
+    const schedSubscription = supabase
+      .channel('public:admin_schedules_admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_schedules' }, () => {
+        fetchEvents();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(schedSubscription);
+    };
   }, []);
 
   const handleSaveEvent = async (e) => {
@@ -129,14 +162,14 @@ export default function ScheduleAdmin() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
       
       {/* Header Actions */}
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+      <div style={{ background: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '10px', color: '#2563eb' }}>
+          <div style={{ background: theme.iconBoxBg, padding: '10px', borderRadius: '10px', color: '#2563eb' }}>
             <CalendarIcon size={22} />
           </div>
           <div>
-            <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>Admin Schedule & Events</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Manage company deadlines, shifts, and events displayed on the calendar.</p>
+            <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: theme.textMain }}>Admin Schedule & Events</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>Manage company deadlines, shifts, and events displayed on the calendar.</p>
           </div>
         </div>
 
@@ -150,51 +183,51 @@ export default function ScheduleAdmin() {
 
       {/* Modal / Inline Form for Create & Update */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', boxSizing: 'border-box' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+          <div style={{ background: theme.modalBg, padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', boxSizing: 'border-box', border: `1px solid ${theme.border}` }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{editingId ? 'Edit Event' : 'Create New Event'}</h3>
-              <button onClick={resetForm} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: theme.textMain }}>{editingId ? 'Edit Event' : 'Create New Event'}</h3>
+              <button onClick={resetForm} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: theme.textMuted }}><X size={18} /></button>
             </div>
 
             <form onSubmit={handleSaveEvent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Event Title</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Event Title</label>
                 <input 
                   type="text" 
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)} 
                   required 
                   placeholder="e.g., Team Sync Meeting"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.inputText, fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Date</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Date</label>
                 <input 
                   type="date" 
                   value={date} 
                   onChange={(e) => setDate(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.inputText, fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Description</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Description</label>
                 <textarea 
                   value={description} 
                   onChange={(e) => setDescription(e.target.value)} 
                   placeholder="Add details or notes..."
                   rows={3}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.inputText, fontSize: '13px', boxSizing: 'border-box', resize: 'vertical' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '8px' }}>
                   <Palette size={14} /> Color Indicator
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -209,7 +242,7 @@ export default function ScheduleAdmin() {
                           borderRadius: '50%', 
                           background: c, 
                           cursor: 'pointer', 
-                          border: color === c ? '3px solid #0f172a' : '2px solid transparent',
+                          border: color === c ? '3px solid #60a5fa' : '2px solid transparent',
                           boxSizing: 'border-box'
                         }}
                       />
@@ -217,7 +250,7 @@ export default function ScheduleAdmin() {
                   </div>
 
                   {/* Native Custom Color Picker Input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid #cbd5e1', paddingLeft: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: `1px solid ${theme.border}`, paddingLeft: '10px' }}>
                     <input 
                       type="color" 
                       value={customColor}
@@ -228,13 +261,13 @@ export default function ScheduleAdmin() {
                       style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'none' }}
                       title="Choose custom color"
                     />
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Custom</span>
+                    <span style={{ fontSize: '11px', color: theme.textMuted, fontWeight: '600' }}>Custom</span>
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={resetForm} style={{ padding: '8px 14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={resetForm} style={{ padding: '8px 14px', background: isDarkMode ? '#334155' : '#f1f5f9', color: isDarkMode ? '#f8fafc' : '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>{editingId ? 'Update Event' : 'Save Event'}</button>
               </div>
             </form>
@@ -245,22 +278,22 @@ export default function ScheduleAdmin() {
 
       {/* Modern Delete Confirmation Popup */}
       {deleteId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '380px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', boxSizing: 'border-box', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+          <div style={{ background: theme.modalBg, padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '380px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', boxSizing: 'border-box', textAlign: 'center', border: `1px solid ${theme.border}` }}>
             
-            <div style={{ background: '#ffeeec', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: '#dc2626' }}>
+            <div style={{ background: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#ffeeec', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: '#dc2626' }}>
               <AlertCircle size={24} />
             </div>
 
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Delete Event</h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.4' }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: theme.textMain }}>Delete Event</h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: theme.textMuted, lineHeight: '1.4' }}>
               Are you sure you want to delete this event? This action cannot be undone.
             </p>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button 
                 onClick={() => setDeleteId(null)} 
-                style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', background: isDarkMode ? '#334155' : '#f1f5f9', color: isDarkMode ? '#f8fafc' : '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -277,17 +310,17 @@ export default function ScheduleAdmin() {
       )}
 
       {/* Calendar Grid Container */}
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+      <div style={{ background: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
         
         {/* Month Header controls */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: theme.textMain }}>
             {monthNames[month]} {year}
           </h3>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={prevMonth} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Prev</button>
-            <button onClick={() => setCurrentDate(new Date())} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Today</button>
-            <button onClick={nextMonth} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}>Next</button>
+            <button onClick={prevMonth} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Prev</button>
+            <button onClick={() => setCurrentDate(new Date())} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Today</button>
+            <button onClick={nextMonth} style={{ padding: '6px 12px', background: theme.navBtnBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', color: theme.navBtnColor }}>Next</button>
           </div>
         </div>
 
@@ -299,7 +332,7 @@ export default function ScheduleAdmin() {
               style={{ 
                 fontSize: '11px', 
                 fontWeight: '800', 
-                color: (index === 0 || index === 6) ? '#94a3b8' : '#64748b', 
+                color: (index === 0 || index === 6) ? '#94a3b8' : theme.textMuted, 
                 textTransform: 'uppercase' 
               }}
             >
@@ -312,7 +345,7 @@ export default function ScheduleAdmin() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
           {/* Blank spaces for preceding days */}
           {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-            <div key={`empty-${index}`} style={{ minHeight: '100px', background: '#f8fafc', borderRadius: '8px', opacity: 0.4 }} />
+            <div key={`empty-${index}`} style={{ minHeight: '100px', background: theme.emptyCellBg, borderRadius: '8px', opacity: 0.3 }} />
           ))}
 
           {/* Actual days of the month */}
@@ -329,11 +362,11 @@ export default function ScheduleAdmin() {
             const dayEvents = events.filter(ev => ev.date === dateString);
             const isToday = new Date().toISOString().split('T')[0] === dateString;
 
-            // Determine background color: Today takes precedence, then Weekends are light gray, weekdays are white
+            // Determine background color based on theme and state
             const getBackground = () => {
-              if (isToday) return '#eff6ff';
-              if (isWeekend) return '#f8fafc';
-              return '#ffffff';
+              if (isToday) return theme.todayBg;
+              if (isWeekend) return theme.weekendBg;
+              return theme.itemBg;
             };
 
             return (
@@ -342,7 +375,7 @@ export default function ScheduleAdmin() {
                 style={{ 
                   minHeight: '110px', 
                   background: getBackground(), 
-                  border: isToday ? '2px solid #2563eb' : '1px solid #e2e8f0', 
+                  border: isToday ? '2px solid #2563eb' : `1px solid ${theme.border}`, 
                   borderRadius: '10px', 
                   padding: '8px', 
                   display: 'flex', 
@@ -353,9 +386,9 @@ export default function ScheduleAdmin() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: isToday ? '#2563eb' : isWeekend ? '#64748b' : '#0f172a' }}>{dayNum}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: isToday ? '#2563eb' : isWeekend ? '#94a3b8' : theme.textMain }}>{dayNum}</span>
                   {dayEvents.length > 0 && (
-                    <span style={{ fontSize: '9px', fontWeight: '800', background: '#e2e8f0', color: '#334155', padding: '1px 5px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: '800', background: theme.badgeBg, color: theme.badgeText, padding: '1px 5px', borderRadius: '4px' }}>
                       {dayEvents.length}
                     </span>
                   )}

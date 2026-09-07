@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 
-export default function AHTMonitoringEmployee({ currentUser }) {
+export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const eid = currentUser?.eid || currentUser?.employee_id || 'EMP001';
   const name = currentUser?.employee_name || currentUser?.name || 'Employee Name';
-  // Assuming currentUser might also provide department and cluster, with fallback values
   const department = currentUser?.department || 'Operations';
   const cluster = currentUser?.cluster || 'Cluster A';
 
@@ -35,6 +34,28 @@ export default function AHTMonitoringEmployee({ currentUser }) {
   const [filterCluster, setFilterCluster] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
+    inputBg: isDarkMode ? '#0f172a' : '#fff',
+    inputBgDisabled: isDarkMode ? '#1e293b' : '#f1f5f9',
+    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
+    inputColor: isDarkMode ? '#f8fafc' : '#0f172a',
+    activeBoxBg: isDarkMode ? '#172554' : '#eff6ff',
+    activeBoxBorder: isDarkMode ? '#1e3a8a' : '#bfdbfe',
+    tableHeaderBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    tableBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    tableRowBorder: isDarkMode ? '#273548' : '#f1f5f9',
+    tableText: isDarkMode ? '#cbd5e1' : '#334155',
+    tableTextMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    paginationBg: isDarkMode ? '#1e293b' : '#fff',
+    paginationDisabledBg: isDarkMode ? '#0f172a' : '#f1f5f9',
+    paginationDisabledColor: isDarkMode ? '#475569' : '#94a3b8',
+  };
 
   // Check and recover interrupted active sessions once on mount
   useEffect(() => {
@@ -246,7 +267,7 @@ export default function AHTMonitoringEmployee({ currentUser }) {
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div style={{ background: '#ffffff', padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: '1px solid #e2e8f0', minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
+    <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
       
       {/* Top Input & Start Action Bar */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', alignItems: 'stretch' }}>
@@ -261,11 +282,12 @@ export default function AHTMonitoringEmployee({ currentUser }) {
               width: '100%', 
               padding: '12px 16px', 
               borderRadius: '8px', 
-              border: '1px solid #cbd5e1', 
+              border: `1px solid ${theme.inputBorder}`, 
               fontSize: '14px', 
               outline: 'none',
               boxSizing: 'border-box',
-              background: activeSession !== null ? '#f1f5f9' : '#fff'
+              background: activeSession !== null ? theme.inputBgDisabled : theme.inputBg,
+              color: theme.inputColor
             }}
           />
         </div>
@@ -297,19 +319,19 @@ export default function AHTMonitoringEmployee({ currentUser }) {
 
       {/* Ongoing Session Live Card */}
       {activeSession && (
-        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px 20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ background: theme.activeBoxBg, border: `1px solid ${theme.activeBoxBorder}`, borderRadius: '12px', padding: '16px 20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             <div>
-              <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Input</span>
-              <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', wordBreak: 'break-all' }}>{activeSession.input}</span>
+              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Input</span>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: theme.titleMain, wordBreak: 'break-all' }}>{activeSession.input}</span>
             </div>
             <div>
-              <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Start Time</span>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>{activeSession.startTime}</span>
+              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Start Time</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: theme.tableText }}>{activeSession.startTime}</span>
             </div>
             <div>
-              <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: '#2563eb', fontFamily: 'monospace' }}>{formatTimer(elapsedSeconds)}</span>
+              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>{formatTimer(elapsedSeconds)}</span>
             </div>
           </div>
 
@@ -338,8 +360,8 @@ export default function AHTMonitoringEmployee({ currentUser }) {
       {/* History Log Section */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <Clock size={18} color="#2563eb" /> AHT Activity Log ({name})
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Clock size={18} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> AHT Activity Log ({name})
           </h3>
 
           {/* Search, Date, Department, and Cluster Filter Controls */}
@@ -356,17 +378,19 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 style={{ 
                   padding: '8px 12px 8px 32px', 
                   borderRadius: '6px', 
-                  border: '1px solid #cbd5e1', 
+                  border: `1px solid ${theme.inputBorder}`, 
                   fontSize: '13px', 
                   outline: 'none',
                   width: '180px',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  background: theme.inputBg,
+                  color: theme.inputColor
                 }}
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')} 
-                  style={{ background: 'none', border: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#64748b' }}
+                  style={{ background: 'none', border: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: theme.titleSub }}
                 >
                   <X size={13} />
                 </button>
@@ -380,11 +404,11 @@ export default function AHTMonitoringEmployee({ currentUser }) {
               style={{
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid #cbd5e1',
+                border: `1px solid ${theme.inputBorder}`,
                 fontSize: '13px',
                 outline: 'none',
-                background: '#fff',
-                color: filterDepartment ? '#0f172a' : '#64748b'
+                background: theme.inputBg,
+                color: filterDepartment ? theme.titleMain : theme.titleSub
               }}
             >
               <option value="">All Departments</option>
@@ -400,11 +424,11 @@ export default function AHTMonitoringEmployee({ currentUser }) {
               style={{
                 padding: '8px 12px',
                 borderRadius: '6px',
-                border: '1px solid #cbd5e1',
+                border: `1px solid ${theme.inputBorder}`,
                 fontSize: '13px',
                 outline: 'none',
-                background: '#fff',
-                color: filterCluster ? '#0f172a' : '#64748b'
+                background: theme.inputBg,
+                color: filterCluster ? theme.titleMain : theme.titleSub
               }}
             >
               <option value="">All Clusters</option>
@@ -423,11 +447,11 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 style={{ 
                   padding: '7px 12px 7px 32px', 
                   borderRadius: '6px', 
-                  border: '1px solid #cbd5e1', 
+                  border: `1px solid ${theme.inputBorder}`, 
                   fontSize: '13px', 
                   outline: 'none',
-                  color: filterDate ? '#0f172a' : '#64748b',
-                  background: '#fff',
+                  color: filterDate ? theme.titleMain : theme.titleSub,
+                  background: theme.inputBg,
                   boxSizing: 'border-box'
                 }}
               />
@@ -435,9 +459,9 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 <button 
                   onClick={() => setFilterDate('')}
                   title="Clear Date Filter"
-                  style={{ marginLeft: '6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
+                  style={{ marginLeft: '6px', background: theme.inputBgDisabled, border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
                 >
-                  <X size={13} color="#64748b" />
+                  <X size={13} color={theme.titleSub} />
                 </button>
               )}
             </div>
@@ -445,26 +469,26 @@ export default function AHTMonitoringEmployee({ currentUser }) {
         </div>
 
         {/* Scrollable Table Container */}
-        <div style={{ maxHeight: '420px', overflowY: 'auto', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ maxHeight: '420px', overflowY: 'auto', overflowX: 'auto', border: `1px solid ${theme.tableBorder}`, borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '850px' }}>
-            <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
-              <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>No.</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>EID</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Name</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Department</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Cluster</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Input</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Start Time</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>End Time</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>AHT</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: '#f8fafc' }}>Created At</th>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.tableHeaderBg }}>
+              <tr style={{ borderBottom: `1px solid ${theme.tableBorder}`, color: theme.titleSub }}>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>No.</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>EID</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Name</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Department</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Cluster</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>
+                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>
               </tr>
             </thead>
             <tbody>
               {paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: theme.titleSub }}>
                     {logs.length === 0 
                       ? 'No completed sessions logged yet for your account. Start a tracking session above.' 
                       : 'No logs match your search or filter criteria.'}
@@ -472,17 +496,17 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 </tr>
               ) : (
                 paginatedLogs.map((log, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.number}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155', fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.name, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.department, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{highlightText(log.cluster, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#0f172a', fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.start_time}</td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>{log.end_time}</td>
-                    <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>{log.created_at}</td>
+                  <tr key={index} style={{ borderBottom: `1px solid ${theme.tableRowBorder}` }}>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.number}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.name, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.department, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.cluster, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>
+                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>
+                    <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
+                    <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>
                   </tr>
                 ))
               )}
@@ -491,7 +515,7 @@ export default function AHTMonitoringEmployee({ currentUser }) {
         </div>
 
         {/* Pagination and Range Selector Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: '#475569' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: theme.titleSub }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span>Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries</span>
             {filteredLogs.length !== logs.length && <span>(filtered from {logs.length} total)</span>}
@@ -503,7 +527,7 @@ export default function AHTMonitoringEmployee({ currentUser }) {
               <select 
                 value={itemsPerPage} 
                 onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#fff', fontSize: '13px' }}
+                style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${theme.inputBorder}`, outline: 'none', background: theme.inputBg, color: theme.inputColor, fontSize: '13px' }}
               >
                 <option value={10}>10</option>
                 <option value={15}>15</option>
@@ -519,9 +543,9 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 style={{ 
                   padding: '6px 10px', 
                   borderRadius: '6px', 
-                  border: '1px solid #cbd5e1', 
-                  background: currentPage === 1 ? '#f1f5f9' : '#fff', 
-                  color: currentPage === 1 ? '#94a3b8' : '#334155', 
+                  border: `1px solid ${theme.inputBorder}`, 
+                  background: currentPage === 1 ? theme.paginationDisabledBg : theme.paginationBg, 
+                  color: currentPage === 1 ? theme.paginationDisabledColor : theme.tableText, 
                   cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -531,7 +555,7 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 <ChevronLeft size={15} /> Prev
               </button>
 
-              <span style={{ fontWeight: '600', color: '#0f172a' }}>
+              <span style={{ fontWeight: '600', color: theme.titleMain }}>
                 {currentPage}/{totalPages || 1}
               </span>
 
@@ -541,9 +565,9 @@ export default function AHTMonitoringEmployee({ currentUser }) {
                 style={{ 
                   padding: '6px 10px', 
                   borderRadius: '6px', 
-                  border: '1px solid #cbd5e1', 
-                  background: (currentPage === totalPages || totalPages === 0) ? '#f1f5f9' : '#fff', 
-                  color: (currentPage === totalPages || totalPages === 0) ? '#94a3b8' : '#334155', 
+                  border: `1px solid ${theme.inputBorder}`, 
+                  background: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledBg : theme.paginationBg, 
+                  color: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledColor : theme.tableText, 
                   cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
