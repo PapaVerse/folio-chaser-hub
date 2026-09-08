@@ -39,6 +39,8 @@ export default function EmployeeProfile({ isDarkMode }) {
     inputBg: isDarkMode ? '#0f172a' : '#ffffff',
     inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
     subtleBg: isDarkMode ? '#111827' : '#f8fafc',
+    highlightBorder: '#eab308', // Yellow/Gold highlight for matching search cards
+    highlightBg: isDarkMode ? '#422006' : '#fefce8',
   };
 
   const fetchData = async () => {
@@ -64,8 +66,8 @@ export default function EmployeeProfile({ isDarkMode }) {
     fetchData();
   }, []);
 
-  // Filter nodes based on Quick-Search input (Matches Name, EID, or Department)
-  const filteredNodes = hierarchyNodes.filter(node => {
+  // Helper function to check if a node matches the current search term
+  const matchesSearch = (node) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -73,13 +75,26 @@ export default function EmployeeProfile({ isDarkMode }) {
       node.eid?.toLowerCase().includes(term) ||
       node.department?.toLowerCase().includes(term)
     );
-  });
+  };
 
-  const clients = filteredNodes.filter(n => n.tier === 'Client');
-  const managers = filteredNodes.filter(n => n.tier === 'Manager');
-  const teamLeads = filteredNodes.filter(n => n.tier === 'Team Lead');
-  const qualityAnalysts = filteredNodes.filter(n => n.tier === 'Quality Analyst');
-  const agents = filteredNodes.filter(n => n.tier === 'Agents');
+  const clients = hierarchyNodes.filter(n => n.tier === 'Client' && matchesSearch(n));
+  const managers = hierarchyNodes.filter(n => n.tier === 'Manager' && matchesSearch(n));
+  const qualityAnalysts = hierarchyNodes.filter(n => n.tier === 'Quality Analyst');
+  const agents = hierarchyNodes.filter(n => n.tier === 'Agents');
+
+  // Filter Team Leads: Include a Team Lead if their card matches OR if any of their subordinate QAs/Agents match
+  const teamLeads = hierarchyNodes.filter(tl => {
+    if (tl.tier !== 'Team Lead') return false;
+    if (matchesSearch(tl)) return true;
+
+    const subAgents = agents.filter(a => a.parent_id === tl.id);
+    const subQAs = qualityAnalysts.filter(qa => qa.parent_id === tl.id);
+
+    const hasMatchingAgent = subAgents.some(a => matchesSearch(a));
+    const hasMatchingQA = subQAs.some(qa => matchesSearch(qa));
+
+    return hasMatchingAgent || hasMatchingQA;
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', boxSizing: 'border-box' }}>
@@ -134,26 +149,30 @@ export default function EmployeeProfile({ isDarkMode }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '24px' }}>
             
             {/* CLIENT */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-              <div style={{ background: theme.tierBadgeBg, color: theme.tierBadgeColor, padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Client ({clients.length})</div>
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
-                {clients.map(node => (
-                  <OrgCardViewOnly key={node.id} node={node} theme={theme} />
-                ))}
+            {clients.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                <div style={{ background: theme.tierBadgeBg, color: theme.tierBadgeColor, padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Client ({clients.length})</div>
+                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
+                  {clients.map(node => (
+                    <OrgCardViewOnly key={node.id} node={node} theme={theme} isHighlighted={matchesSearch(node) && searchTerm.trim() !== ''} />
+                  ))}
+                </div>
+                <div style={{ width: '2px', height: '24px', background: theme.connectorColor, marginTop: '14px' }} />
               </div>
-              {clients.length > 0 && <div style={{ width: '2px', height: '24px', background: theme.connectorColor, marginTop: '14px' }} />}
-            </div>
+            )}
 
             {/* MANAGER */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-              <div style={{ background: theme.tierBadgeBg, color: theme.tierBadgeColor, padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Manager ({managers.length})</div>
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
-                {managers.map(node => (
-                  <OrgCardViewOnly key={node.id} node={node} theme={theme} />
-                ))}
+            {managers.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                <div style={{ background: theme.tierBadgeBg, color: theme.tierBadgeColor, padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Manager ({managers.length})</div>
+                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
+                  {managers.map(node => (
+                    <OrgCardViewOnly key={node.id} node={node} theme={theme} isHighlighted={matchesSearch(node) && searchTerm.trim() !== ''} />
+                  ))}
+                </div>
+                <div style={{ width: '2px', height: '24px', background: theme.connectorColor, marginTop: '14px' }} />
               </div>
-              {managers.length > 0 && <div style={{ width: '2px', height: '24px', background: theme.connectorColor, marginTop: '14px' }} />}
-            </div>
+            )}
 
             {/* TEAM LEADS, QUALITY ANALYSTS & DEPARTMENT GROUPS */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
@@ -172,8 +191,29 @@ export default function EmployeeProfile({ isDarkMode }) {
                       return acc;
                     }, {});
 
+                    const isTLHighlighted = matchesSearch(tl) && searchTerm.trim() !== '';
+                    // Force expand the sub-card container if search term matches any inner item
+                    const hasActiveSubMatch = searchTerm.trim() !== '' && (
+                      subQAs.some(qa => matchesSearch(qa)) ||
+                      subAgents.some(a => matchesSearch(a))
+                    );
+                    const shouldExpand = isExpanded || hasActiveSubMatch;
+
                     return (
-                      <div key={tl.id} style={{ background: theme.nodeCardBg, border: `2px solid ${theme.nodeCardBorder}`, borderRadius: '14px', padding: '18px', flex: '1 1 340px', maxWidth: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 6px 12px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
+                      <div key={tl.id} style={{ 
+                        background: isTLHighlighted ? theme.highlightBg : theme.nodeCardBg, 
+                        border: `2px solid ${isTLHighlighted ? theme.highlightBorder : theme.nodeCardBorder}`, 
+                        borderRadius: '14px', 
+                        padding: '18px', 
+                        flex: '1 1 340px', 
+                        maxWidth: '450px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        boxShadow: '0 6px 12px rgba(0,0,0,0.04)', 
+                        boxSizing: 'border-box',
+                        transition: 'all 0.2s ease-in-out'
+                      }}>
                         
                         {/* Team Lead Profile */}
                         <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: theme.avatarBg, color: theme.avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', border: `2px solid ${theme.avatarBorder}` }}>
@@ -183,22 +223,33 @@ export default function EmployeeProfile({ isDarkMode }) {
                         <span style={{ fontSize: '11px', fontWeight: '700', color: theme.headerIconColor }}>{tl.eid}</span>
                         <span style={{ background: theme.deptBadgeBg, color: theme.deptBadgeColor, padding: '2px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', margin: '6px 0 14px 0' }}>{tl.department}</span>
 
-                        {/* Sub-Components Container (Collapsible) */}
-                        {isExpanded && (
+                        {/* Sub-Components Container (Collapsible or Force Expanded on Search Match) */}
+                        {shouldExpand && (
                           <div style={{ width: '100%', borderTop: `2px dashed ${theme.connectorColor}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             
                             {/* Quality Analysts Section */}
                             {subQAs.length > 0 && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <span style={{ fontSize: '11px', fontWeight: '900', color: theme.titleMain, textTransform: 'uppercase', textAlign: 'left' }}>Quality Analysts ({subQAs.length})</span>
-                                {subQAs.map(qa => (
-                                  <div key={qa.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: theme.subCardBg, borderRadius: '8px', border: `1px solid ${theme.subCardBorder}` }}>
-                                    <div style={{ textAlign: 'left' }}>
-                                      <div style={{ fontSize: '11px', fontWeight: '800', color: theme.titleMain }}>{qa.name}</div>
-                                      <div style={{ fontSize: '10px', color: theme.headerIconColor, fontWeight: '700' }}>{qa.eid}</div>
+                                {subQAs.map(qa => {
+                                  const isQAMatch = matchesSearch(qa) && searchTerm.trim() !== '';
+                                  return (
+                                    <div key={qa.id} style={{ 
+                                      display: 'flex', 
+                                      justifyContent: 'space-between', 
+                                      alignItems: 'center', 
+                                      padding: '6px 8px', 
+                                      background: isQAMatch ? theme.highlightBg : theme.subCardBg, 
+                                      borderRadius: '8px', 
+                                      border: `1px solid ${isQAMatch ? theme.highlightBorder : theme.subCardBorder}` 
+                                    }}>
+                                      <div style={{ textAlign: 'left' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: theme.titleMain }}>{qa.name}</div>
+                                        <div style={{ fontSize: '10px', color: theme.headerIconColor, fontWeight: '700' }}>{qa.eid}</div>
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
 
@@ -222,14 +273,26 @@ export default function EmployeeProfile({ isDarkMode }) {
                                   </div>
 
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    {deptAgents.map(agent => (
-                                      <div key={agent.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: `1px solid ${theme.subAgentDivider}` }}>
-                                        <div style={{ textAlign: 'left', overflow: 'hidden' }}>
-                                          <div style={{ fontSize: '11px', fontWeight: '800', color: theme.titleMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
-                                          <div style={{ fontSize: '10px', color: theme.headerIconColor, fontWeight: '700' }}>{agent.eid}</div>
+                                    {deptAgents.map(agent => {
+                                      const isAgentMatch = matchesSearch(agent) && searchTerm.trim() !== '';
+                                      return (
+                                        <div key={agent.id} style={{ 
+                                          display: 'flex', 
+                                          justifyContent: 'space-between', 
+                                          alignItems: 'center', 
+                                          padding: '6px 8px', 
+                                          borderRadius: '6px',
+                                          background: isAgentMatch ? theme.highlightBg : 'transparent',
+                                          border: isAgentMatch ? `1px solid ${theme.highlightBorder}` : '1px solid transparent',
+                                          borderBottom: !isAgentMatch ? `1px solid ${theme.subAgentDivider}` : `1px solid ${theme.highlightBorder}` 
+                                        }}>
+                                          <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                                            <div style={{ fontSize: '11px', fontWeight: '800', color: theme.titleMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
+                                            <div style={{ fontSize: '10px', color: theme.headerIconColor, fontWeight: '700' }}>{agent.eid}</div>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
 
                                 </div>
@@ -244,7 +307,7 @@ export default function EmployeeProfile({ isDarkMode }) {
                     );
                   })
                 ) : (
-                  <div style={{ padding: '10px', color: theme.titleSub, fontSize: '12px' }}>No Team Leads found.</div>
+                  <div style={{ padding: '10px', color: theme.titleSub, fontSize: '12px' }}>No Team Leads or matching members found.</div>
                 )}
               </div>
 
@@ -258,9 +321,21 @@ export default function EmployeeProfile({ isDarkMode }) {
   );
 }
 
-function OrgCardViewOnly({ node, theme }) {
+function OrgCardViewOnly({ node, theme, isHighlighted }) {
   return (
-    <div style={{ background: theme.nodeCardBg, border: `2px solid ${theme.nodeCardBorder}`, borderRadius: '12px', padding: '16px', width: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+    <div style={{ 
+      background: isHighlighted ? theme.highlightBg : theme.nodeCardBg, 
+      border: `2px solid ${isHighlighted ? theme.highlightBorder : theme.nodeCardBorder}`, 
+      borderRadius: '12px', 
+      padding: '16px', 
+      width: '200px', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      textAlign: 'center', 
+      boxShadow: '0 4px 6px rgba(0,0,0,0.02)',
+      transition: 'all 0.2s ease-in-out'
+    }}>
       <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: theme.avatarBg, color: theme.avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', border: `2px solid ${theme.avatarBorder}` }}>
         <User size={24} />
       </div>

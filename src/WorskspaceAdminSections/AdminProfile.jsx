@@ -144,22 +144,14 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
     }
   };
 
-  // Filter nodes based on Quick-Search input (Matches Name or EID)
-  const filteredNodes = hierarchyNodes.filter(node => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      node.name?.toLowerCase().includes(term) ||
-      node.eid?.toLowerCase().includes(term) ||
-      node.department?.toLowerCase().includes(term)
-    );
-  });
-
-  const clients = filteredNodes.filter(n => n.tier === 'Client');
-  const managers = filteredNodes.filter(n => n.tier === 'Manager');
-  const teamLeads = filteredNodes.filter(n => n.tier === 'Team Lead');
-  const qualityAnalysts = filteredNodes.filter(n => n.tier === 'Quality Analyst');
-  const agents = filteredNodes.filter(n => n.tier === 'Agents');
+  // FIX: Instead of filtering out non-matching nodes (which completely broke the layout tree and 
+  // hid parent Team Leads when searching for sub-agents), we keep all nodes so the tree structure 
+  // remains intact, and instead pass down search matching flags/terms for visual highlighting.
+  const clients = hierarchyNodes.filter(n => n.tier === 'Client');
+  const managers = hierarchyNodes.filter(n => n.tier === 'Manager');
+  const teamLeads = hierarchyNodes.filter(n => n.tier === 'Team Lead');
+  const qualityAnalysts = hierarchyNodes.filter(n => n.tier === 'Quality Analyst');
+  const agents = hierarchyNodes.filter(n => n.tier === 'Agents');
 
   // Dynamic Theme Colors based on isDarkMode prop
   const theme = {
@@ -291,7 +283,7 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
             <div style={{ background: isDarkMode ? '#334155' : '#1e293b', color: '#fff', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Client ({clients.length})</div>
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
               {clients.map(node => (
-                <OrgCard key={node.id} node={node} onDelete={confirmDeleteNode} isDarkMode={isDarkMode} theme={theme} />
+                <OrgCard key={node.id} node={node} onDelete={confirmDeleteNode} isDarkMode={isDarkMode} theme={theme} searchTerm={searchTerm} />
               ))}
             </div>
             {clients.length > 0 && <div style={{ width: '2px', height: '24px', background: theme.inputBorder, marginTop: '14px' }} />}
@@ -302,7 +294,7 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
             <div style={{ background: isDarkMode ? '#334155' : '#1e293b', color: '#fff', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Manager ({managers.length})</div>
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
               {managers.map(node => (
-                <OrgCard key={node.id} node={node} onDelete={confirmDeleteNode} isDarkMode={isDarkMode} theme={theme} />
+                <OrgCard key={node.id} node={node} onDelete={confirmDeleteNode} isDarkMode={isDarkMode} theme={theme} searchTerm={searchTerm} />
               ))}
             </div>
             {managers.length > 0 && <div style={{ width: '2px', height: '24px', background: theme.inputBorder, marginTop: '14px' }} />}
@@ -325,16 +317,41 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                     return acc;
                   }, {});
 
+                  const isTlMatch = searchTerm && (
+                    tl.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    tl.eid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    tl.department?.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+
                   return (
-                    <div key={tl.id} style={{ background: theme.subtleBg, border: `2px solid ${isDarkMode ? '#475569' : '#64748b'}`, borderRadius: '14px', padding: '18px', flex: '1 1 340px', maxWidth: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: isDarkMode ? 'none' : '0 6px 12px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
+                    <div key={tl.id} style={{ 
+                      background: theme.subtleBg, 
+                      border: `2px solid ${isTlMatch ? '#2563eb' : (isDarkMode ? '#475569' : '#64748b')}`, 
+                      boxShadow: isTlMatch ? (isDarkMode ? '0 0 15px rgba(37, 99, 235, 0.4)' : '0 0 15px rgba(37, 99, 235, 0.25)') : (isDarkMode ? 'none' : '0 6px 12px rgba(0,0,0,0.04)'),
+                      borderRadius: '14px', 
+                      padding: '18px', 
+                      flex: '1 1 340px', 
+                      maxWidth: '450px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease-in-out'
+                    }}>
                       
                       {/* Team Lead Profile */}
                       <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: isDarkMode ? '#1e3a8a' : '#e0f2fe', color: isDarkMode ? '#93c5fd' : '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', border: `2px solid ${isDarkMode ? '#3b82f6' : '#bae6fd'}` }}>
                         <User size={26} />
                       </div>
-                      <h4 style={{ margin: '0 0 2px 0', fontSize: '13px', fontWeight: '800', color: theme.textMain, textAlign: 'center' }}>{tl.name}</h4>
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: isDarkMode ? '#60a5fa' : '#2563eb' }}>{tl.eid}</span>
-                      <span style={{ background: isDarkMode ? '#1e3a8a' : '#eff6ff', color: isDarkMode ? '#93c5fd' : '#2563eb', padding: '2px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', margin: '6px 0 10px 0' }}>{tl.department}</span>
+                      <h4 style={{ margin: '0 0 2px 0', fontSize: '13px', fontWeight: '800', color: theme.textMain, textAlign: 'center' }}>
+                        <HighlightText text={tl.name} highlight={searchTerm} />
+                      </h4>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
+                        <HighlightText text={tl.eid} highlight={searchTerm} />
+                      </span>
+                      <span style={{ background: isDarkMode ? '#1e3a8a' : '#eff6ff', color: isDarkMode ? '#93c5fd' : '#2563eb', padding: '2px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', margin: '6px 0 10px 0' }}>
+                        <HighlightText text={tl.department} highlight={searchTerm} />
+                      </span>
                       
                       <button onClick={() => confirmDeleteNode(tl.id)} style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '14px' }}>
                         <Trash2 size={12} /> Remove TL
@@ -348,17 +365,36 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                           {subQAs.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase', textAlign: 'left' }}>Quality Analysts ({subQAs.length})</span>
-                              {subQAs.map(qa => (
-                                <div key={qa.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: theme.cardBg, borderRadius: '8px', border: `1px solid ${theme.inputBorder}` }}>
-                                  <div style={{ textAlign: 'left' }}>
-                                    <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain }}>{qa.name}</div>
-                                    <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>{qa.eid}</div>
+                              {subQAs.map(qa => {
+                                const isQaMatch = searchTerm && (
+                                  qa.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  qa.eid?.toLowerCase().includes(searchTerm.toLowerCase())
+                                );
+                                return (
+                                  <div key={qa.id} style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    padding: '6px 8px', 
+                                    background: theme.cardBg, 
+                                    borderRadius: '8px', 
+                                    border: `2px solid ${isQaMatch ? '#2563eb' : theme.inputBorder}`,
+                                    boxShadow: isQaMatch ? (isDarkMode ? '0 0 10px rgba(37, 99, 235, 0.3)' : '0 0 10px rgba(37, 99, 235, 0.2)') : 'none'
+                                  }}>
+                                    <div style={{ textAlign: 'left' }}>
+                                      <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain }}>
+                                        <HighlightText text={qa.name} highlight={searchTerm} />
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>
+                                        <HighlightText text={qa.eid} highlight={searchTerm} />
+                                      </div>
+                                    </div>
+                                    <button onClick={() => confirmDeleteNode(qa.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove QA">
+                                      <Trash2 size={13} />
+                                    </button>
                                   </div>
-                                  <button onClick={() => confirmDeleteNode(qa.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove QA">
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
 
@@ -374,7 +410,7 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: `2px solid ${theme.border}`, paddingBottom: '6px', marginBottom: '4px' }}>
                                   <FolderGit2 size={14} color={isDarkMode ? '#60a5fa' : '#0284c7'} />
                                   <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                                    {deptName}
+                                    <HighlightText text={deptName} highlight={searchTerm} />
                                   </span>
                                   <span style={{ marginLeft: 'auto', background: isDarkMode ? '#1e3a8a' : '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '6px', fontSize: '9px', fontWeight: '900' }}>
                                     {deptAgents.length}
@@ -382,17 +418,37 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  {deptAgents.map(agent => (
-                                    <div key={agent.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: `1px solid ${theme.border}` }}>
-                                      <div style={{ textAlign: 'left', overflow: 'hidden' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
-                                        <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>{agent.eid}</div>
+                                  {deptAgents.map(agent => {
+                                    const isAgentMatch = searchTerm && (
+                                      agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                      agent.eid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                      agent.department?.toLowerCase().includes(searchTerm.toLowerCase())
+                                    );
+                                    return (
+                                      <div key={agent.id} style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center', 
+                                        padding: '6px 6px', 
+                                        borderBottom: `1px solid ${theme.border}`,
+                                        borderRadius: '6px',
+                                        background: isAgentMatch ? (isDarkMode ? 'rgba(37, 99, 235, 0.2)' : 'rgba(37, 99, 235, 0.08)') : 'transparent',
+                                        border: isAgentMatch ? '1px solid #2563eb' : `1px solid transparent`
+                                      }}>
+                                        <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                                          <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <HighlightText text={agent.name} highlight={searchTerm} />
+                                          </div>
+                                          <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>
+                                            <HighlightText text={agent.eid} highlight={searchTerm} />
+                                          </div>
+                                        </div>
+                                        <button onClick={() => confirmDeleteNode(agent.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove Agent">
+                                          <Trash2 size={13} />
+                                        </button>
                                       </div>
-                                      <button onClick={() => confirmDeleteNode(agent.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove Agent">
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
 
                               </div>
@@ -588,15 +644,56 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
   );
 }
 
-function OrgCard({ node, onDelete, isDarkMode, theme }) {
+// Utility component to render search keyword highlighting safely
+function HighlightText({ text, highlight }) {
+  if (!highlight || !text) return text;
+  const parts = text.toString().split(new RegExp(`(${highlight})`, 'gi'));
   return (
-    <div style={{ background: theme.subtleBg, border: `2px solid ${theme.inputBorder}`, borderRadius: '12px', padding: '16px', width: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', boxShadow: isDarkMode ? 'none' : '0 4px 6px rgba(0,0,0,0.02)' }}>
+    <span>
+      {parts.map((part, i) => 
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <mark key={i} style={{ backgroundColor: '#facc15', color: '#0f172a', padding: '0 2px', borderRadius: '2px', fontWeight: 'inherit' }}>{part}</mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+}
+
+function OrgCard({ node, onDelete, isDarkMode, theme, searchTerm }) {
+  const isMatch = searchTerm && (
+    node.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    node.eid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    node.department?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div style={{ 
+      background: theme.subtleBg, 
+      border: `2px solid ${isMatch ? '#2563eb' : theme.inputBorder}`, 
+      boxShadow: isMatch ? (isDarkMode ? '0 0 15px rgba(37, 99, 235, 0.4)' : '0 0 15px rgba(37, 99, 235, 0.25)') : (isDarkMode ? 'none' : '0 4px 6px rgba(0,0,0,0.02)'),
+      borderRadius: '12px', 
+      padding: '16px', 
+      width: '200px', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      textAlign: 'center',
+      transition: 'all 0.2s ease-in-out'
+    }}>
       <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: isDarkMode ? '#1e3a8a' : '#e0f2fe', color: isDarkMode ? '#93c5fd' : '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', border: `2px solid ${isDarkMode ? '#3b82f6' : '#bae6fd'}` }}>
         <User size={24} />
       </div>
-      <h4 style={{ margin: '0 0 2px 0', fontSize: '13px', fontWeight: '700', color: theme.textMain, width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{node.name}</h4>
-      <span style={{ fontSize: '11px', fontWeight: '600', color: isDarkMode ? '#60a5fa' : '#2563eb', marginBottom: '4px' }}>{node.eid}</span>
-      <span style={{ background: isDarkMode ? '#1e3a8a' : '#eff6ff', color: isDarkMode ? '#93c5fd' : '#2563eb', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginBottom: '10px' }}>{node.department}</span>
+      <h4 style={{ margin: '0 0 2px 0', fontSize: '13px', fontWeight: '700', color: theme.textMain, width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <HighlightText text={node.name} highlight={searchTerm} />
+      </h4>
+      <span style={{ fontSize: '11px', fontWeight: '600', color: isDarkMode ? '#60a5fa' : '#2563eb', marginBottom: '4px' }}>
+        <HighlightText text={node.eid} highlight={searchTerm} />
+      </span>
+      <span style={{ background: isDarkMode ? '#1e3a8a' : '#eff6ff', color: isDarkMode ? '#93c5fd' : '#2563eb', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginBottom: '10px' }}>
+        <HighlightText text={node.department} highlight={searchTerm} />
+      </span>
       <button onClick={() => onDelete(node.id)} style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
         <Trash2 size={12} /> Remove
       </button>
