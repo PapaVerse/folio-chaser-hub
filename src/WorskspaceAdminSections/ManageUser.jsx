@@ -100,6 +100,21 @@ export default function ManageUser({ isDarkMode }) {
     }
   };
 
+  // Helper function to format timestamp cleanly
+  const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   // Derive unique department and cluster options from the users list
   const departments = ['ALL', ...new Set(users.map(u => u.department).filter(Boolean))];
   const clusters = ['ALL', ...new Set(users.map(u => u.cluster).filter(Boolean))];
@@ -216,29 +231,34 @@ export default function ManageUser({ isDarkMode }) {
           )}
         </div>
 
-        {/* Table */}
-        <div style={{ overflowX: 'auto' }}>
+        {/* Scrollable Table Container */}
+        <div style={{ maxHeight: '520px', overflowY: 'auto', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ background: theme.tableHeaderBg, borderBottom: `1px solid ${theme.border}`, color: theme.textSub, fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: theme.tableHeaderBg }}>
+              <tr style={{ borderBottom: `1px solid ${theme.border}`, color: theme.textSub, fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <th style={{ padding: '16px 20px', width: '60px', textAlign: 'center' }}>No.</th>
                 <th style={{ padding: '16px 24px' }}>Employee Name</th>
                 <th style={{ padding: '16px 24px' }}>EID</th>
                 <th style={{ padding: '16px 24px' }}>Department</th>
                 <th style={{ padding: '16px 24px' }}>Cluster</th>
                 <th style={{ padding: '16px 24px' }}>Role</th>
+                <th style={{ padding: '16px 24px' }}>Created At</th>
                 <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: theme.textMuted }}>
+                  <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: theme.textMuted }}>
                     No users found matching the selected filters.
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => (
+                filteredUsers.map((u, index) => (
                   <tr key={u.id} style={{ borderBottom: `1px solid ${theme.tableBorder}`, transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = theme.rowHover} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '18px 20px', textAlign: 'center', fontWeight: '600', color: theme.textMuted, fontSize: '13px' }}>
+                      {index + 1}
+                    </td>
                     <td style={{ padding: '18px 24px', fontWeight: '600', color: theme.textMain }}>
                       {u.employee_name || 'N/A'}
                     </td>
@@ -267,6 +287,9 @@ export default function ManageUser({ isDarkMode }) {
                         {u.role === 'admin' ? <Shield size={12} /> : <User size={12} />}
                         <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
                       </span>
+                    </td>
+                    <td style={{ padding: '18px 24px', color: theme.textMuted, fontSize: '13px', fontWeight: '500' }}>
+                      {formatDate(u.created_at)}
                     </td>
                     <td style={{ padding: '18px 24px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
