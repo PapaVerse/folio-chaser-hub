@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter } from 'lucide-react';
+import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter, AlertTriangle } from 'lucide-react';
 
 export default function ManageUser({ isDarkMode }) {
   const [users, setUsers] = useState([]);
@@ -10,6 +10,10 @@ export default function ManageUser({ isDarkMode }) {
   const [selectedDepartment, setSelectedDepartment] = useState('ALL');
   const [selectedCluster, setSelectedCluster] = useState('ALL');
   
+  // Delete Modal States
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Edit Modal States
   const [editingUser, setEditingUser] = useState(null);
   const [editEid, setEditEid] = useState('');
@@ -39,19 +43,22 @@ export default function ManageUser({ isDarkMode }) {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user profile?')) return;
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    setDeleting(true);
 
     const { error } = await supabase
       .from('app_users')
       .delete()
-      .eq('id', id);
+      .eq('id', userToDelete.id);
 
     if (!error) {
-      setUsers(users.filter(u => u.id !== id));
+      setUsers(users.filter(u => u.id !== userToDelete.id));
+      setUserToDelete(null);
     } else {
       alert('Failed to delete user.');
     }
+    setDeleting(false);
   };
 
   const handleOpenEdit = (user) => {
@@ -148,7 +155,7 @@ export default function ManageUser({ isDarkMode }) {
     adminBadgeText: isDarkMode ? '#93c5fd' : '#2563eb',
     employeeBadgeBg: isDarkMode ? '#334155' : 'rgba(241, 245, 249, 1)',
     employeeBadgeBorder: isDarkMode ? '#475569' : '#e2e8f0',
-    employeeBadgeText: isDarkMode ? '#cbd5e1' : '#475569',
+    employeeBadgeText: isDarkMode ? '#cbd5e1' : '#64748b',
     editBtnBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
     editBtnBorder: isDarkMode ? '#1d4ed8' : '#bfdbfe',
     editBtnText: isDarkMode ? '#93c5fd' : '#2563eb',
@@ -301,7 +308,7 @@ export default function ManageUser({ isDarkMode }) {
                           <span>Edit</span>
                         </button>
                         <button 
-                          onClick={() => handleDelete(u.id)}
+                          onClick={() => setUserToDelete(u)}
                           style={{ background: theme.deleteBtnBg, border: `1px solid ${theme.deleteBtnBorder}`, color: theme.deleteBtnText, padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s ease' }}
                         >
                           <Trash2 size={14} />
@@ -316,6 +323,78 @@ export default function ManageUser({ isDarkMode }) {
           </table>
         </div>
       </div>
+
+      {/* Modern Confirmation Delete Modal */}
+      {userToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: theme.modalOverlay,
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: theme.modalBg,
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: isDarkMode ? '0 20px 40px -15px rgba(0, 0, 0, 0.6)' : '0 20px 40px -15px rgba(15, 23, 42, 0.25)',
+            border: `1px solid ${theme.border}`,
+            boxSizing: 'border-box',
+            padding: '32px 28px',
+            textAlign: 'center'
+          }}>
+            <div style={{ 
+              width: '56px', 
+              height: '56px', 
+              background: isDarkMode ? 'rgba(127, 29, 29, 0.4)' : '#fef2f2', 
+              border: `1px solid ${isDarkMode ? '#991b1b' : '#fecaca'}`,
+              borderRadius: '16px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: '#dc2626', 
+              margin: '0 auto 20px auto' 
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: theme.textMain }}>
+              Delete User Profile?
+            </h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: theme.textMuted, lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong style={{ color: theme.textMain }}>{userToDelete.employee_name || userToDelete.eid}</strong>? This action cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deleting}
+                style={{ flex: 1, padding: '12px', background: isDarkMode ? '#334155' : '#f1f5f9', border: `1px solid ${theme.inputBorder}`, borderRadius: '10px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#475569', cursor: 'pointer', fontSize: '14px' }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                style={{ flex: 1, padding: '12px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)' }}
+              >
+                {deleting && <Loader2 size={16} className="animate-spin" />}
+                <span>{deleting ? 'Deleting...' : 'Yes, Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit User Modal */}
       {editingUser && (
