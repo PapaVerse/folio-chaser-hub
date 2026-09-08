@@ -1,15 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Trash2, Layers, User, FolderGit2, AlertTriangle, X } from 'lucide-react';
+import { Plus, Trash2, Layers, User, FolderGit2, AlertTriangle, X, Search, History, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function AdminProfile({ currentUser, isDarkMode }) {
   const [users, setUsers] = useState([]);
   const [hierarchyNodes, setHierarchyNodes] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   
   const [selectedTier, setSelectedTier] = useState('Client');
   const [selectedUserEid, setSelectedUserEid] = useState('');
   const [selectedParentId, setSelectedParentId] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Quick-Search state
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Expand/Collapse state
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  // Audit log drawer state
+  const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
 
   // Modern delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -37,6 +47,17 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
       }
 
       if (nodesData) setHierarchyNodes(nodesData);
+
+      // Fetch audit logs if table exists
+      const { data: logsData, error: logsError } = await supabase
+        .from('hierarchy_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!logsError && logsData) {
+        setAuditLogs(logsData);
+      }
     } catch (err) {
       console.error('Error loading profile data:', err.message);
     } finally {
@@ -47,6 +68,19 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const logAction = async (actionText) => {
+    try {
+      await supabase.from('hierarchy_audit_logs').insert([{
+        action: actionText,
+        performed_by: currentUser?.employee_name || currentUser?.email || 'Admin',
+        created_at: new Date().toISOString()
+      }]);
+    } catch (err) {
+      // Fail silently if audit table hasn't been provisioned yet
+      console.log('Audit log table optional notice:', err.message);
+    }
+  };
 
   const handleAddNode = async (tierName) => {
     if (!selectedUserEid) return;
@@ -74,6 +108,8 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
 
       if (error) throw error;
 
+      await logAction(`Added ${chosenUser.employee_name} (${chosenUser.eid}) to tier ${tierName}`);
+
       setSelectedUserEid('');
       setSelectedParentId('');
       await fetchData();
@@ -97,6 +133,9 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
         .eq('id', nodeToDelete.id);
 
       if (error) throw error;
+
+      await logAction(`Removed ${nodeToDelete.name || 'User'} from hierarchy`);
+
       setDeleteModalOpen(false);
       setNodeToDelete(null);
       await fetchData();
@@ -105,11 +144,22 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
     }
   };
 
-  const clients = hierarchyNodes.filter(n => n.tier === 'Client');
-  const managers = hierarchyNodes.filter(n => n.tier === 'Manager');
-  const teamLeads = hierarchyNodes.filter(n => n.tier === 'Team Lead');
-  const qualityAnalysts = hierarchyNodes.filter(n => n.tier === 'Quality Analyst');
-  const agents = hierarchyNodes.filter(n => n.tier === 'Agents');
+  // Filter nodes based on Quick-Search input (Matches Name or EID)
+  const filteredNodes = hierarchyNodes.filter(node => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      node.name?.toLowerCase().includes(term) ||
+      node.eid?.toLowerCase().includes(term) ||
+      node.department?.toLowerCase().includes(term)
+    );
+  });
+
+  const clients = filteredNodes.filter(n => n.tier === 'Client');
+  const managers = filteredNodes.filter(n => n.tier === 'Manager');
+  const teamLeads = filteredNodes.filter(n => n.tier === 'Team Lead');
+  const qualityAnalysts = filteredNodes.filter(n => n.tier === 'Quality Analyst');
+  const agents = filteredNodes.filter(n => n.tier === 'Agents');
 
   // Dynamic Theme Colors based on isDarkMode prop
   const theme = {
@@ -128,11 +178,49 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', boxSizing: 'border-box', position: 'relative' }}>
       
-      {/* Top Controller Box */}
+      {/* Top Controller Box & Quick Search Header Bar */}
       <div style={{ background: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <Layers size={22} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
-          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: theme.textMain }}>Assign Team Members to Organizational Tiers</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Layers size={22} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: theme.textMain }}>Assign Team Members to Organizational Tiers</h2>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Quick-Search & Filter Bar */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={15} color={theme.textMuted} style={{ position: 'absolute', left: '12px' }} />
+              <input
+                type="text"
+                placeholder="Search name or ID (e.g., CXI12585)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ padding: '8px 12px 8px 34px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '12px', background: theme.inputBg, color: theme.textMain, width: '240px', outline: 'none' }}
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: theme.textMuted, cursor: 'pointer', fontSize: '12px' }}>×</button>
+              )}
+            </div>
+
+            {/* Expand / Collapse All Toggle */}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', background: theme.subtleBg, border: `1px solid ${theme.inputBorder}`, color: theme.textMain, padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+              title={isExpanded ? 'Collapse Sub-groups' : 'Expand All'}
+            >
+              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              <span>{isExpanded ? 'Collapse All' : 'Expand All'}</span>
+            </button>
+
+            {/* Audit Log Drawer Trigger Button */}
+            <button
+              onClick={() => setAuditDrawerOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: theme.subtleBg, border: `1px solid ${theme.inputBorder}`, color: theme.textMain, padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              <History size={14} />
+              <span>Audit Log</span>
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -220,14 +308,15 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
             {managers.length > 0 && <div style={{ width: '2px', height: '24px', background: theme.inputBorder, marginTop: '14px' }} />}
           </div>
 
-          {/* TEAM LEADS & DEPARTMENT GROUPS */}
+          {/* TEAM LEADS, QUALITY ANALYSTS & ASSIGNED TEAMS */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <div style={{ background: isDarkMode ? '#334155' : '#1e293b', color: '#fff', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Team Leads & Assigned Teams</div>
+            <div style={{ background: isDarkMode ? '#334155' : '#1e293b', color: '#fff', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase' }}>Team Leads, Quality Analysts & Assigned Teams</div>
             
             <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', width: '100%', flexWrap: 'wrap' }}>
               {teamLeads.length > 0 ? (
                 teamLeads.map(tl => {
                   const subAgents = agents.filter(a => a.parent_id === tl.id);
+                  const subQAs = qualityAnalysts.filter(qa => qa.parent_id === tl.id);
                   
                   const agentsByDept = subAgents.reduce((acc, agent) => {
                     const dept = agent.department || 'General';
@@ -251,47 +340,68 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                         <Trash2 size={12} /> Remove TL
                       </button>
 
-                      {/* Sub-Agents Container */}
-                      <div style={{ width: '100%', borderTop: `2px dashed ${theme.inputBorder}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase' }}>Sub-Agents</span>
-                          <span style={{ background: theme.badgeBg, color: theme.badgeText, padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' }}>{subAgents.length} Total</span>
-                        </div>
-                        
-                        {Object.keys(agentsByDept).length > 0 ? (
-                          Object.entries(agentsByDept).map(([deptName, deptAgents]) => (
-                            <div key={deptName} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: theme.cardBg, padding: '12px', borderRadius: '10px', border: `2px solid ${theme.inputBorder}`, boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-                              
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: `2px solid ${theme.border}`, paddingBottom: '6px', marginBottom: '4px' }}>
-                                <FolderGit2 size={14} color={isDarkMode ? '#60a5fa' : '#0284c7'} />
-                                <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                                  {deptName}
-                                </span>
-                                <span style={{ marginLeft: 'auto', background: isDarkMode ? '#1e3a8a' : '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '6px', fontSize: '9px', fontWeight: '900' }}>
-                                  {deptAgents.length}
-                                </span>
-                              </div>
-
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                {deptAgents.map(agent => (
-                                  <div key={agent.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: `1px solid ${theme.border}` }}>
-                                    <div style={{ textAlign: 'left', overflow: 'hidden' }}>
-                                      <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
-                                      <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>{agent.eid}</div>
-                                    </div>
-                                    <button onClick={() => confirmDeleteNode(agent.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove Agent">
-                                      <Trash2 size={13} />
-                                    </button>
+                      {/* Sub-Components Container (Collapsible) */}
+                      {isExpanded && (
+                        <div style={{ width: '100%', borderTop: `2px dashed ${theme.inputBorder}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          
+                          {/* Quality Analysts Section */}
+                          {subQAs.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase', textAlign: 'left' }}>Quality Analysts ({subQAs.length})</span>
+                              {subQAs.map(qa => (
+                                <div key={qa.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: theme.cardBg, borderRadius: '8px', border: `1px solid ${theme.inputBorder}` }}>
+                                  <div style={{ textAlign: 'left' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain }}>{qa.name}</div>
+                                    <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>{qa.eid}</div>
                                   </div>
-                                ))}
-                              </div>
-
+                                  <button onClick={() => confirmDeleteNode(qa.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove QA">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
-                          ))
-                        ) : (
-                          <div style={{ fontSize: '11px', color: theme.textMuted, fontStyle: 'italic', textAlign: 'left', padding: '6px' }}>No agents assigned yet.</div>
-                        )}
-                      </div>
+                          )}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: subQAs.length > 0 ? '6px' : '0' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase' }}>Sub-Agents</span>
+                            <span style={{ background: theme.badgeBg, color: theme.badgeText, padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' }}>{subAgents.length} Total</span>
+                          </div>
+                          
+                          {Object.keys(agentsByDept).length > 0 ? (
+                            Object.entries(agentsByDept).map(([deptName, deptAgents]) => (
+                              <div key={deptName} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: theme.cardBg, padding: '12px', borderRadius: '10px', border: `2px solid ${theme.inputBorder}`, boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                                
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: `2px solid ${theme.border}`, paddingBottom: '6px', marginBottom: '4px' }}>
+                                  <FolderGit2 size={14} color={isDarkMode ? '#60a5fa' : '#0284c7'} />
+                                  <span style={{ fontSize: '11px', fontWeight: '900', color: theme.textMain, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                    {deptName}
+                                  </span>
+                                  <span style={{ marginLeft: 'auto', background: isDarkMode ? '#1e3a8a' : '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '6px', fontSize: '9px', fontWeight: '900' }}>
+                                    {deptAgents.length}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  {deptAgents.map(agent => (
+                                    <div key={agent.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: `1px solid ${theme.border}` }}>
+                                      <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: theme.textMain, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
+                                        <div style={{ fontSize: '10px', color: isDarkMode ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>{agent.eid}</div>
+                                      </div>
+                                      <button onClick={() => confirmDeleteNode(agent.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }} title="Remove Agent">
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ fontSize: '11px', color: theme.textMuted, fontStyle: 'italic', textAlign: 'left', padding: '6px' }}>No agents assigned yet.</div>
+                          )}
+                        </div>
+                      )}
 
                     </div>
                   );
@@ -305,6 +415,54 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
 
         </div>
       </div>
+
+      {/* History / Audit Log Drawer */}
+      {auditDrawerOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: '400px',
+          maxWidth: '100vw',
+          height: '100vh',
+          background: theme.cardBg,
+          color: theme.textMain,
+          boxShadow: '-10px 0 25px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          borderLeft: `1px solid ${theme.border}`,
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ padding: '20px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <History size={18} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>Hierarchy Audit Trail</h3>
+            </div>
+            <button onClick={() => setAuditDrawerOpen(false)} style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted, cursor: 'pointer' }}>
+              <X size={15} />
+            </button>
+          </div>
+
+          <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {auditLogs.length > 0 ? (
+              auditLogs.map((log, index) => (
+                <div key={log.id || index} style={{ background: theme.subtleBg, padding: '12px', borderRadius: '10px', border: `1px solid ${theme.border}`, fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontWeight: '700', color: theme.textMain }}>{log.action}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.textMuted, fontSize: '10px' }}>
+                    <span>By: {log.performed_by}</span>
+                    <span>{new Date(log.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ color: theme.textMuted, fontSize: '12px', textAlign: 'center', marginTop: '40px' }}>
+                No recent history logs available yet.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modern Delete Confirmation Modal */}
       {deleteModalOpen && (
@@ -379,10 +537,10 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
 
             {/* Title & Description */}
             <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', color: theme.textMain }}>
-              Remove Profile?
+              Unassign User?
             </h3>
             <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: theme.textMuted, lineHeight: '1.5' }}>
-              Are you sure you want to remove <strong style={{ color: theme.textMain }}>{nodeToDelete?.name || 'this profile'}</strong> from the organizational tier? This action can be undone by re-adding them later.
+              Are you sure you want to unassign <strong style={{ color: theme.textMain }}>{nodeToDelete?.name || 'this user'}</strong> from Team Lead / organizational tier? This action can be undone by re-adding them later.
             </p>
 
             {/* Actions */}
@@ -418,7 +576,7 @@ export default function AdminProfile({ currentUser, isDarkMode }) {
                   boxShadow: '0 4px 6px rgba(220, 38, 38, 0.2)'
                 }}
               >
-                Yes, Remove
+                Yes, Unassign
               </button>
             </div>
 

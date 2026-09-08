@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
@@ -15,6 +15,9 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
   const [filterCluster, setFilterCluster] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
 
   // Selection & Deletion States
   const [selectedIds, setSelectedIds] = useState([]);
@@ -38,7 +41,8 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
     inputBorder: isDarkMode ? '#334155' : '#cbd5e1',
     inputText: isDarkMode ? '#f8fafc' : '#0f172a',
     theadBg: isDarkMode ? '#111827' : '#f8fafc',
-    iconBoxBg: isDarkMode ? 'rgba(37, 99, 235, 0.25)' : '#eff6ff'
+    iconBoxBg: isDarkMode ? 'rgba(37, 99, 235, 0.25)' : '#eff6ff',
+    kpiBg: isDarkMode ? '#0f172a' : '#f8fafc'
   };
 
   useEffect(() => {
@@ -112,6 +116,50 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
     );
   };
 
+  // Helper to convert AHT string (HH:MM:SS or MM:SS or seconds) to total seconds for calculations & sorting
+  const parseAhtToSeconds = (ahtStr) => {
+    if (!ahtStr) return 0;
+    const parts = ahtStr.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    return Number(ahtStr) || 0;
+  };
+
+  // Format average seconds back to readable MM:SS or HH:MM:SS
+  const formatSecondsToAht = (totalSeconds) => {
+    const secs = Math.round(totalSeconds);
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const remainSecs = secs % 60;
+    if (hrs > 0) {
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(remainSecs).padStart(2, '0')}`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(remainSecs).padStart(2, '0')}`;
+  };
+
+  // KPI Calculations
+  const totalRecordsCount = logs.length;
+  
+  // Total Inputs Processed Today (using local calendar date comparison)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const totalInputsToday = logs.filter(log => {
+    if (!log.raw_created_at) return false;
+    return log.raw_created_at.split('T')[0] === todayStr;
+  }).length;
+
+  // Active Employees Monitored (unique EIDs across all or filtered logs)
+  const activeEmployeesCount = new Set(logs.map(log => log.eid)).size;
+
+  // Average AHT Across All Records
+  const averageAhtStr = (() => {
+    if (logs.length === 0) return '00:00';
+    const totalSecs = logs.reduce((acc, log) => acc + parseAhtToSeconds(log.aht), 0);
+    return formatSecondsToAht(totalSecs / logs.length);
+  })();
+
   // Filter logs based on search query, date, employee, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
@@ -146,15 +194,45 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
     return matchesSearch && matchesDate && matchesEid && matchesDepartment && matchesCluster;
   });
 
+  // Sorting Handler
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort filtered logs
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    let aValue = a[sortConfig.key];
+    let bValue = b[sortConfig.key];
+
+    if (sortConfig.key === 'aht') {
+      aValue = parseAhtToSeconds(a.aht);
+      bValue = parseAhtToSeconds(b.aht);
+    } else if (sortConfig.key === 'number' || sortConfig.key === 'input') {
+      aValue = Number(aValue) || 0;
+      bValue = Number(bValue) || 0;
+    } else {
+      aValue = (aValue || '').toString().toLowerCase();
+      bValue = (bValue || '').toString().toLowerCase();
+    }
+
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterDate, filterEid, filterDepartment, filterCluster, itemsPerPage]);
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
+  const totalPages = Math.ceil(sortedLogs.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedLogs = sortedLogs.slice(startIndex, startIndex + itemsPerPage);
 
   // Selection Handlers
   const handleSelectAll = (e) => {
@@ -221,9 +299,9 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
 
   // Export filtered logs to a real .xlsx Excel file
   const handleExportExcel = () => {
-    if (filteredLogs.length === 0) return;
+    if (sortedLogs.length === 0) return;
 
-    const dataToExport = filteredLogs.map(log => ({
+    const dataToExport = sortedLogs.map(log => ({
       'No.': log.number,
       'EID': log.eid,
       'Name': log.name,
@@ -240,6 +318,43 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'AHT Logs');
     XLSX.writeFile(workbook, `aht_admin_logs_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Helper to render sort icon indicator
+  const renderSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <ArrowUpDown size={13} style={{ opacity: 0.4, marginLeft: '4px' }} />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp size={13} style={{ color: '#2563eb', marginLeft: '4px' }} /> 
+      : <ArrowDown size={13} style={{ color: '#2563eb', marginLeft: '4px' }} />;
+  };
+
+  // Helper to get threshold badge styles based on AHT duration
+  // E.g., fast handling (< 30s) = green, moderate (30s - 120s) = neutral/blue, excessive (> 120s) = red flag
+  const getAhtBadgeStyle = (ahtStr) => {
+    const secs = parseAhtToSeconds(ahtStr);
+    if (secs < 30) {
+      return {
+        bg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5',
+        color: '#059669',
+        border: isDarkMode ? '#065f46' : '#a7f3d0',
+        label: 'Fast'
+      };
+    } else if (secs > 120) {
+      return {
+        bg: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#fef2f2',
+        color: '#dc2626',
+        border: isDarkMode ? '#7f1d1d' : '#fecaca',
+        label: 'Excessive'
+      };
+    }
+    return {
+      bg: isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff',
+      color: '#2563eb',
+      border: isDarkMode ? '#1e40af' : '#bfdbfe',
+      label: 'Normal'
+    };
   };
 
   return (
@@ -284,16 +399,16 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
 
           <button 
             onClick={handleExportExcel}
-            disabled={filteredLogs.length === 0}
+            disabled={sortedLogs.length === 0}
             style={{ 
               padding: '9px 16px', 
-              background: filteredLogs.length === 0 ? '#94a3b8' : '#10b981', 
+              background: sortedLogs.length === 0 ? '#94a3b8' : '#10b981', 
               color: '#fff', 
               border: 'none', 
               borderRadius: '8px', 
               fontWeight: '600', 
               fontSize: '13px', 
-              cursor: filteredLogs.length === 0 ? 'not-allowed' : 'pointer',
+              cursor: sortedLogs.length === 0 ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -302,6 +417,55 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
             <Download size={15} /> Export Excel
           </button>
         </div>
+      </div>
+
+      {/* Top Metrics Row / KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        
+        {/* KPI Card 1: Average AHT Across All Records */}
+        <div style={{ background: theme.kpiBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(37, 99, 235, 0.25)' : '#eff6ff', color: '#2563eb', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Clock size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Average AHT (All Records)</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain, fontFamily: 'monospace' }}>{averageAhtStr}</div>
+          </div>
+        </div>
+
+        {/* KPI Card 2: Total Inputs Processed Today */}
+        <div style={{ background: theme.kpiBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5', color: '#10b981', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Layers size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Total Inputs Today</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain }}>{totalInputsToday}</div>
+          </div>
+        </div>
+
+        {/* KPI Card 3: Active Employees Monitored */}
+        <div style={{ background: theme.kpiBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7', color: '#d97706', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Active Employees Monitored</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain }}>{activeEmployeesCount}</div>
+          </div>
+        </div>
+
+        {/* KPI Card 4: Total System Records */}
+        <div style={{ background: theme.kpiBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(147, 51, 234, 0.2)' : '#f3e8ff', color: '#9333ea', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Building size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Total System Logs</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain }}>{totalRecordsCount}</div>
+          </div>
+        </div>
+
       </div>
 
       {/* Filter Toolbar */}
@@ -456,16 +620,38 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
                   style={{ cursor: 'pointer', width: '15px', height: '15px' }}
                 />
               </th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>No.</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>EID</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Name</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Department</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Cluster</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Input</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Start Time</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>End Time</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>AHT</th>
-              <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted }}>Created At</th>
+              
+              {/* Clickable Column Headers for Sorting */}
+              <th onClick={() => handleSort('number')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>No. {renderSortIcon('number')}</div>
+              </th>
+              <th onClick={() => handleSort('eid')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>EID {renderSortIcon('eid')}</div>
+              </th>
+              <th onClick={() => handleSort('name')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Name {renderSortIcon('name')}</div>
+              </th>
+              <th onClick={() => handleSort('department')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Department {renderSortIcon('department')}</div>
+              </th>
+              <th onClick={() => handleSort('cluster')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Cluster {renderSortIcon('cluster')}</div>
+              </th>
+              <th onClick={() => handleSort('input')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Input {renderSortIcon('input')}</div>
+              </th>
+              <th onClick={() => handleSort('start_time')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Start Time {renderSortIcon('start_time')}</div>
+              </th>
+              <th onClick={() => handleSort('end_time')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>End Time {renderSortIcon('end_time')}</div>
+              </th>
+              <th onClick={() => handleSort('aht')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>AHT & Threshold {renderSortIcon('aht')}</div>
+              </th>
+              <th onClick={() => handleSort('created_at')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Created At {renderSortIcon('created_at')}</div>
+              </th>
               <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -487,6 +673,7 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
             ) : (
               paginatedLogs.map((log) => {
                 const isSelected = selectedIds.includes(log.id);
+                const threshold = getAhtBadgeStyle(log.aht);
                 return (
                   <tr key={log.id} style={{ borderBottom: `1px solid ${theme.borderLight}`, background: isSelected ? theme.selectedRowBg : 'transparent', transition: 'background 0.15s' }}>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -505,7 +692,29 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
                     <td style={{ padding: '12px 16px', color: theme.textMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
                     <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.start_time}</td>
                     <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.end_time}</td>
-                    <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
+                    
+                    {/* AHT Column with Performance Threshold Badge */}
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: theme.textMain, fontWeight: '700', fontFamily: 'monospace' }}>
+                          {highlightText(log.aht, searchQuery)}
+                        </span>
+                        <span style={{ 
+                          background: threshold.bg, 
+                          color: threshold.color, 
+                          border: `1px solid ${threshold.border}`,
+                          fontSize: '10px', 
+                          fontWeight: '700', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {threshold.label}
+                        </span>
+                      </div>
+                    </td>
+
                     <td style={{ padding: '12px 16px', color: theme.textMuted, fontSize: '12px' }}>{log.created_at}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <button 
@@ -538,8 +747,8 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
       {/* Pagination and Range Selector Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: theme.textMuted }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span>Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries</span>
-          {filteredLogs.length !== logs.length && <span>(filtered from {logs.length} total system entries)</span>}
+          <span>Showing {sortedLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, sortedLogs.length)} of {sortedLogs.length} entries</span>
+          {sortedLogs.length !== logs.length && <span>(filtered from {logs.length} total system entries)</span>}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>

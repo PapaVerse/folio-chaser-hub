@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { BookOpen, FileText, Trash2, Edit2, X, Plus, Calendar, User, Download, FileSpreadsheet, Presentation, AlertTriangle, Search, Link as LinkIcon } from 'lucide-react';
+import { BookOpen, FileText, Trash2, Edit2, X, Plus, Calendar, User, Download, FileSpreadsheet, Presentation, AlertTriangle, Search, Link as LinkIcon, ChevronLeft, ChevronRight, Copy, Check, Star, Video, Globe } from 'lucide-react';
 
 export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
   const [documents, setDocuments] = useState([]);
@@ -16,17 +16,78 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
   // Form states
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
+  const [docType, setDocType] = useState('PDF'); // New state for Tagging/Format Badge
   const [file, setFile] = useState(null);
   const [externalUrl, setExternalUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Department tabs, search state
+  // Department tabs, search, favorites state
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [favorites, setFavorites] = useState([]);
+  const [copiedId, setCopiedId] = useState(null);
+
+  // Scroll ref for category tabs
+  const tabsContainerRef = useRef(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // Load local bookmarks/favorites for current user if available
+    const savedFavs = localStorage.getItem(`kb_favorites_${currentUser?.id || 'guest'}`);
+    if (savedFavs) {
+      try { setFavorites(JSON.parse(savedFavs)); } catch (e) { console.error(e); }
+    }
+  }, [currentUser]);
+
+  const checkScrollable = () => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setShowLeftScroll(scrollLeft > 10);
+      setShowRightScroll(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollable();
+    window.addEventListener('resize', checkScrollable);
+    return () => window.removeEventListener('resize', checkScrollable);
+  }, [departmentsList]);
+
+  const scrollTabs = (direction) => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 200;
+      tabsContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+      setTimeout(checkScrollable, 300);
+    }
+  };
+
+  const toggleFavorite = (docId, e) => {
+    e.stopPropagation();
+    let updated;
+    if (favorites.includes(docId)) {
+      updated = favorites.filter(id => id !== docId);
+    } else {
+      updated = [...favorites, docId];
+    }
+    setFavorites(updated);
+    localStorage.setItem(`kb_favorites_${currentUser?.id || 'guest'}`, JSON.stringify(updated));
+  };
+
+  const copyToClipboard = (url, docId, e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(docId);
+      setTimeout(() => setCopiedId(null), 2000);
+    }).catch(err => {
+      console.error('Failed to copy link: ', err);
+      alert('Failed to copy link to clipboard.');
+    });
+  };
 
   const fetchData = async () => {
     const [guidelinesRes, usersRes] = await Promise.all([
@@ -50,7 +111,7 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
       
       setDepartmentsList(finalDepts);
       
-      setActiveTab(prev => (prev === 'All' || finalDepts.includes(prev) ? (prev || 'All') : 'All'));
+      setActiveTab(prev => (prev === 'All' || prev === 'Favorites' || finalDepts.includes(prev) ? (prev || 'All') : 'All'));
       setDepartment(prev => (prev && finalDepts.includes(prev) ? prev : finalDepts[0]));
     }
   };
@@ -67,10 +128,15 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
     try {
       let fileUrl = editingDoc?.file_url || '';
       let fileName = editingDoc?.file_name || '';
+      let currentDocType = docType;
 
       if (externalUrl.trim()) {
         fileUrl = externalUrl.trim();
         fileName = externalUrl.trim();
+        // Auto detect format tag if external URL contains specific services
+        if (fileUrl.includes('docs.google.com') || fileUrl.includes('notion.so')) currentDocType = 'Google Doc';
+        else if (fileUrl.includes('youtube.com') || fileUrl.includes('vimeo.com')) currentDocType = 'Video Guide';
+        else if (fileUrl.includes('forms.gle') || fileUrl.includes('form')) currentDocType = 'External Link';
       } 
       else if (file) {
         const fileExt = file.name.split('.').pop().toLowerCase();
@@ -80,6 +146,11 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
           setUploading(false);
           return;
         }
+
+        if (['xls', 'xlsx', 'csv'].includes(fileExt)) currentDocType = 'Spreadsheet';
+        else if (['ppt', 'pptx'].includes(fileExt)) currentDocType = 'Presentation';
+        else if (fileExt === 'pdf') currentDocType = 'PDF';
+        else currentDocType = 'Document';
 
         const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${department.toLowerCase().replace(/[^a-z0-9]/g, '_')}/${uniqueFileName}`;
@@ -100,28 +171,27 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
 
       const uploaderName = currentUser?.employee_name || currentUser?.name || 'Administrator';
 
+      // Note: Make sure your supabase table includes `doc_type` column if persisting tag, or handle gracefully if schema is strict.
+      const payload = {
+        title,
+        department,
+        file_url: fileUrl,
+        file_name: fileName,
+        doc_type: currentDocType,
+      };
+
       if (editingDoc) {
         const { error: updateError } = await supabase
           .from('knowledge_guidelines')
-          .update({
-            title,
-            department,
-            file_url: fileUrl,
-            file_name: fileName,
-          })
+          .update(payload)
           .eq('id', editingDoc.id);
 
         if (updateError) throw updateError;
       } else {
+        payload.uploaded_by = uploaderName;
         const { error: insertError } = await supabase
           .from('knowledge_guidelines')
-          .insert([{
-            title,
-            department,
-            file_url: fileUrl,
-            file_name: fileName,
-            uploaded_by: uploaderName,
-          }]);
+          .insert([payload]);
 
         if (insertError) throw insertError;
       }
@@ -130,7 +200,7 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
       fetchData();
     } catch (error) {
       console.error('Error saving guideline:', error);
-      alert('Failed to save document. Make sure the storage bucket "guidelines" exists in Supabase if uploading files.');
+      alert('Failed to save document. Make sure storage bucket and table columns are up to date.');
     } finally {
       setUploading(false);
     }
@@ -168,13 +238,15 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
       setEditingDoc(doc);
       setTitle(doc.title);
       setDepartment(doc.department);
+      setDocType(doc.doc_type || 'PDF');
       setFile(null);
       const isExternal = doc.file_url && !doc.file_url.includes('guidelines');
       setExternalUrl(isExternal ? doc.file_url : '');
     } else {
       setEditingDoc(null);
       setTitle('');
-      setDepartment(activeTab !== 'All' ? activeTab : departmentsList[0]);
+      setDepartment(activeTab !== 'All' && activeTab !== 'Favorites' ? activeTab : departmentsList[0]);
+      setDocType('PDF');
       setFile(null);
       setExternalUrl('');
     }
@@ -189,7 +261,9 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
     setExternalUrl('');
   };
 
-  const getFileIcon = (fileName, fileUrl) => {
+  const getFileIcon = (fileName, fileUrl, typeTag) => {
+    if (typeTag === 'Video Guide') return <Video size={20} color={isDarkMode ? '#f472b6' : '#db2777'} />;
+    if (typeTag === 'Google Doc' || typeTag === 'External Link') return <Globe size={20} color={isDarkMode ? '#fb923c' : '#ea580c'} />;
     if (fileUrl && !fileUrl.includes('guidelines')) return <LinkIcon size={20} color={isDarkMode ? '#fb923c' : '#ea580c'} />;
     if (!fileName) return <FileText size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />;
     const ext = fileName.split('.').pop().toLowerCase();
@@ -212,7 +286,12 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
   };
 
   const filteredDocs = documents.filter(doc => {
-    const matchesTab = activeTab === 'All' || doc.department === activeTab;
+    let matchesTab = true;
+    if (activeTab === 'Favorites') {
+      matchesTab = favorites.includes(doc.id);
+    } else if (activeTab !== 'All') {
+      matchesTab = doc.department === activeTab;
+    }
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (doc.file_name && doc.file_name.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesTab && matchesSearch;
@@ -269,63 +348,117 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
         </div>
       </div>
 
-      {/* Dynamic Department Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${theme.border}`, marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+      {/* Dynamic Department Navigation Tabs with Scroll Arrows */}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.border}`, marginBottom: '24px' }}>
         
-        <button
-          onClick={() => setActiveTab('All')}
-          style={{
-            padding: '10px 16px',
-            background: activeTab === 'All' ? theme.tabActiveBg : 'transparent',
-            color: activeTab === 'All' ? theme.tabActiveText : theme.textMuted,
-            border: activeTab === 'All' ? `1px solid ${theme.tabActiveBorder}` : '1px solid transparent',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '13px',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s'
-          }}
-        >
-          <span>All Departments</span>
-          <span style={{ background: activeTab === 'All' ? (isDarkMode ? '#1e40af' : '#dbeafe') : theme.badgeBg, color: activeTab === 'All' ? (isDarkMode ? '#bfdbfe' : '#1d4ed8') : theme.badgeText, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
-            {documents.length}
-          </span>
-        </button>
+        {showLeftScroll && (
+          <button 
+            onClick={() => scrollTabs('left')}
+            style={{ position: 'absolute', left: 0, zIndex: 10, height: '100%', background: isDarkMode ? 'linear-gradient(to right, #0f172a 60%, transparent)' : 'linear-gradient(to right, #fff 60%, transparent)', border: 'none', cursor: 'pointer', color: theme.textMain, padding: '0 8px', display: 'flex', alignItems: 'center' }}
+          >
+            <ChevronLeft size={18} />
+          </button>
+        )}
 
-        {departmentsList.map((dept) => {
-          const count = documents.filter(d => d.department === dept).length;
-          const isActive = activeTab === dept;
-          return (
-            <button
-              key={dept}
-              onClick={() => setActiveTab(dept)}
-              style={{
-                padding: '10px 16px',
-                background: isActive ? theme.tabActiveBg : 'transparent',
-                color: isActive ? theme.tabActiveText : theme.textMuted,
-                border: isActive ? `1px solid ${theme.tabActiveBorder}` : '1px solid transparent',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <span>{dept}</span>
-              <span style={{ background: isActive ? (isDarkMode ? '#1e40af' : '#dbeafe') : theme.badgeBg, color: isActive ? (isDarkMode ? '#bfdbfe' : '#1d4ed8') : theme.badgeText, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+        <div 
+          ref={tabsContainerRef}
+          onScroll={checkScrollable}
+          style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', width: '100%', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {/* All Departments Tab */}
+          <button
+            onClick={() => setActiveTab('All')}
+            style={{
+              padding: '10px 16px',
+              background: activeTab === 'All' ? theme.tabActiveBg : 'transparent',
+              color: activeTab === 'All' ? theme.tabActiveText : theme.textMuted,
+              border: activeTab === 'All' ? `1px solid ${theme.tabActiveBorder}` : '1px solid transparent',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexShrink: 0,
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>All Departments</span>
+            <span style={{ background: activeTab === 'All' ? (isDarkMode ? '#1e40af' : '#dbeafe') : theme.badgeBg, color: activeTab === 'All' ? (isDarkMode ? '#bfdbfe' : '#1d4ed8') : theme.badgeText, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+              {documents.length}
+            </span>
+          </button>
+
+          {/* Favorites Tab */}
+          <button
+            onClick={() => setActiveTab('Favorites')}
+            style={{
+              padding: '10px 16px',
+              background: activeTab === 'Favorites' ? theme.tabActiveBg : 'transparent',
+              color: activeTab === 'Favorites' ? theme.tabActiveText : theme.textMuted,
+              border: activeTab === 'Favorites' ? `1px solid ${theme.tabActiveBorder}` : '1px solid transparent',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexShrink: 0,
+              transition: 'all 0.2s'
+            }}
+          >
+            <Star size={14} fill={activeTab === 'Favorites' ? 'currentColor' : 'none'} />
+            <span>My Favorites</span>
+            <span style={{ background: activeTab === 'Favorites' ? (isDarkMode ? '#1e40af' : '#dbeafe') : theme.badgeBg, color: activeTab === 'Favorites' ? (isDarkMode ? '#bfdbfe' : '#1d4ed8') : theme.badgeText, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+              {favorites.length}
+            </span>
+          </button>
+
+          {departmentsList.map((dept) => {
+            const count = documents.filter(d => d.department === dept).length;
+            const isActive = activeTab === dept;
+            return (
+              <button
+                key={dept}
+                onClick={() => setActiveTab(dept)}
+                style={{
+                  padding: '10px 16px',
+                  background: isActive ? theme.tabActiveBg : 'transparent',
+                  color: isActive ? theme.tabActiveText : theme.textMuted,
+                  border: isActive ? `1px solid ${theme.tabActiveBorder}` : '1px solid transparent',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  flexShrink: 0,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span>{dept}</span>
+                <span style={{ background: isActive ? (isDarkMode ? '#1e40af' : '#dbeafe') : theme.badgeBg, color: isActive ? (isDarkMode ? '#bfdbfe' : '#1d4ed8') : theme.badgeText, padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {showRightScroll && (
+          <button 
+            onClick={() => scrollTabs('right')}
+            style={{ position: 'absolute', right: 0, zIndex: 10, height: '100%', background: isDarkMode ? 'linear-gradient(to left, #0f172a 60%, transparent)' : 'linear-gradient(to left, #fff 60%, transparent)', border: 'none', cursor: 'pointer', color: theme.textMain, padding: '0 8px', display: 'flex', alignItems: 'center' }}
+          >
+            <ChevronRight size={18} />
+          </button>
+        )}
       </div>
 
       {/* Documents Container Grid */}
@@ -334,26 +467,51 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: theme.textMuted, background: theme.subtleBg, borderRadius: '12px', border: `1px dashed ${theme.inputBorder}` }}>
             <BookOpen size={36} color={theme.textMuted} style={{ marginBottom: '10px' }} />
             <p style={{ margin: '0 0 4px 0', fontWeight: '600', fontSize: '14px', color: theme.textMain }}>
-              {searchTerm ? `No guidelines match "${searchTerm}"` : `No guidelines uploaded for ${activeTab}`}
+              {searchTerm ? `No guidelines match "${searchTerm}"` : `No guidelines found for ${activeTab}`}
             </p>
             <p style={{ margin: 0, fontSize: '12px' }}>Try adjusting your search query or selecting another tab.</p>
           </div>
         ) : (
           filteredDocs.map((doc) => {
             const isExternalLink = doc.file_url && !doc.file_url.includes('guidelines');
+            const isFav = favorites.includes(doc.id);
+            const isCopied = copiedId === doc.id;
+            const docTag = doc.doc_type || (isExternalLink ? 'External Link' : 'PDF');
+
             return (
               <div key={doc.id} style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: isDarkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.02)', position: 'relative' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: theme.subtleBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' }}>
-                        {getFileIcon(doc.file_name, doc.file_url)}
+                        {getFileIcon(doc.file_name, doc.file_url, docTag)}
                       </div>
                       <span style={{ fontSize: '11px', fontWeight: '700', background: theme.badgeBg, color: theme.badgeText, padding: '4px 8px', borderRadius: '6px' }}>
                         {doc.department}
                       </span>
+                      {/* Format Badge Tag */}
+                      <span style={{ fontSize: '10px', fontWeight: '700', background: isDarkMode ? '#064e3b' : '#ecfdf5', color: isDarkMode ? '#6ee7b7' : '#047857', padding: '3px 6px', borderRadius: '6px' }}>
+                        {docTag}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {/* Bookmark / Favorite Action */}
+                      <button 
+                        onClick={(e) => toggleFavorite(doc.id, e)}
+                        title={isFav ? "Remove from Favorites" : "Add to Favorites"}
+                        style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: '6px', padding: '6px', cursor: 'pointer', color: isFav ? '#eab308' : theme.textMuted, display: 'flex', alignItems: 'center' }}
+                      >
+                        <Star size={14} fill={isFav ? '#eab308' : 'none'} />
+                      </button>
+                      {/* Quick-Copy Link Action */}
+                      <button 
+                        onClick={(e) => copyToClipboard(doc.file_url, doc.id, e)}
+                        title="Copy Direct Link"
+                        style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: '6px', padding: '6px', cursor: 'pointer', color: isCopied ? '#10b981' : theme.textMuted, display: 'flex', alignItems: 'center' }}
+                      >
+                        {isCopied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                      </button>
                       <button 
                         onClick={() => openModal(doc)}
                         title="Edit Document Info"
@@ -477,17 +635,34 @@ export default function KnowledgeGuidelineAdmin({ currentUser, isDarkMode }) {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Department *</label>
-                <select 
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', background: theme.inputBg, color: theme.textMain, boxSizing: 'border-box' }}
-                >
-                  {departmentsList.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Department *</label>
+                  <select 
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', background: theme.inputBg, color: theme.textMain, boxSizing: 'border-box' }}
+                  >
+                    {departmentsList.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain, marginBottom: '6px' }}>Format Badge *</label>
+                  <select 
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${theme.inputBorder}`, fontSize: '13px', outline: 'none', background: theme.inputBg, color: theme.textMain, boxSizing: 'border-box' }}
+                  >
+                    <option value="PDF">PDF</option>
+                    <option value="Google Doc">Google Doc</option>
+                    <option value="Spreadsheet">Spreadsheet</option>
+                    <option value="Presentation">Presentation</option>
+                    <option value="Video Guide">Video Guide</option>
+                    <option value="External Link">External Link</option>
+                  </select>
+                </div>
               </div>
 
               {/* Option A: Upload File */}

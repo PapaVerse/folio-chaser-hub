@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Users, Building } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 
 export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
@@ -55,6 +55,8 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     paginationBg: isDarkMode ? '#1e293b' : '#fff',
     paginationDisabledBg: isDarkMode ? '#0f172a' : '#f1f5f9',
     paginationDisabledColor: isDarkMode ? '#475569' : '#94a3b8',
+    statCardBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    statCardBorder: isDarkMode ? '#334155' : '#e2e8f0',
   };
 
   // Check and recover interrupted active sessions once on mount
@@ -266,9 +268,83 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
+  // Statistics calculations for the top metric cards
+  const calculateAverageAHT = () => {
+    if (logs.length === 0) return '00:00';
+    let totalSecs = 0;
+    logs.forEach(log => {
+      const parts = log.aht.split(':').map(Number);
+      if (parts.length === 3) {
+        totalSecs += parts[0] * 3600 + parts[1] * 60 + parts[2];
+      } else if (parts.length === 2) {
+        totalSecs += parts[0] * 60 + parts[1];
+      }
+    });
+    const avgSecs = Math.round(totalSecs / logs.length);
+    return formatTimer(avgSecs);
+  };
+
+  const todayStr = new Date().toLocaleDateString();
+  const totalInputsToday = logs.filter(log => {
+    if (!log.raw_created_at) return false;
+    return new Date(log.raw_created_at).toLocaleDateString() === todayStr;
+  }).length;
+
+  const activeEmployeesCount = new Set(logs.map(log => log.eid)).size || (logs.length > 0 ? 1 : 0);
+  const totalSystemLogs = logs.length;
+
   return (
     <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
       
+      {/* Metrics Summary Cards Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        
+        {/* Card 1: Average AHT */}
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: isDarkMode ? '#172554' : '#eff6ff', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BarChart2 size={22} color={isDarkMode ? '#93c5fd' : '#2563eb'} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Average AHT (All Records)</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain, fontFamily: 'monospace' }}>{calculateAverageAHT()}</span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Inputs Today */}
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: isDarkMode ? '#064e3b' : '#ecfdf5', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Layers size={22} color={isDarkMode ? '#6ee7b7' : '#059669'} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Inputs Today</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{totalInputsToday}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Active Employees Monitored */}
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: isDarkMode ? '#451a03' : '#fffbeb', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={22} color={isDarkMode ? '#fcd34d' : '#d97706'} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Active Employees Monitored</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{activeEmployeesCount}</span>
+          </div>
+        </div>
+
+        {/* Card 4: Total System Logs */}
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: isDarkMode ? '#581c87' : '#f3e8ff', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Building size={22} color={isDarkMode ? '#d8b4fe' : '#9333ea'} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total System Logs</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{totalSystemLogs}</span>
+          </div>
+        </div>
+
+      </div>
+
       {/* Top Input & Start Action Bar */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', alignItems: 'stretch' }}>
         <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 0 }}>
