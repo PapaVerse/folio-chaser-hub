@@ -1,9 +1,10 @@
+// AHTMonitoringAdmin.jsx
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers, ArrowUpDown, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
-export default function AHTMonitoringAdmin({ isDarkMode }) {
+export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,6 +16,28 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
   const [filterCluster, setFilterCluster] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  const STORAGE_VISIBILITY_KEY = 'aht_columns_visibility';
+
+  // Toggle state controlling the Employee View's AHT column visibility via localStorage & events
+  const [isEmployeeAhtVisible, setIsEmployeeAhtVisible] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.aht !== false;
+    }
+    return true;
+  });
+
+  const toggleEmployeeAhtVisibility = () => {
+    const nextState = !isEmployeeAhtVisible;
+    setIsEmployeeAhtVisible(nextState);
+    const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
+    let currentVisibility = saved ? JSON.parse(saved) : { aht: true };
+    currentVisibility.aht = nextState;
+    localStorage.setItem(STORAGE_VISIBILITY_KEY, JSON.stringify(currentVisibility));
+    window.dispatchEvent(new Event('columnVisibilityChanged'));
+  };
 
   // Sorting State
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
@@ -269,7 +292,6 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
     setDeleting(true);
     try {
       if (targetDeleteLog) {
-        // Single delete
         const { error } = await supabase
           .from('aht_logs')
           .delete()
@@ -277,7 +299,6 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
 
         if (error) throw error;
       } else {
-        // Bulk delete
         const { error } = await supabase
           .from('aht_logs')
           .delete()
@@ -330,18 +351,36 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
       : <ArrowDown size={13} style={{ color: '#2563eb', marginLeft: '4px' }} />;
   };
 
-  // Helper to get threshold badge styles based on AHT duration
-  // E.g., fast handling (< 30s) = green, moderate (30s - 120s) = neutral/blue, excessive (> 120s) = red flag
+  // Helper to get threshold badge styles based on AHT duration ranges:
+  // < 2 mins (120s): easy
+  // 2 - 5 mins (120s - 300s): normal
+  // 5 - 15 mins (300s - 900s): hard
+  // >= 15 mins (900s+): excessive
   const getAhtBadgeStyle = (ahtStr) => {
     const secs = parseAhtToSeconds(ahtStr);
-    if (secs < 30) {
+    
+    if (secs < 120) {
       return {
         bg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5',
         color: '#059669',
         border: isDarkMode ? '#065f46' : '#a7f3d0',
-        label: 'Fast'
+        label: 'Easy'
       };
-    } else if (secs > 120) {
+    } else if (secs >= 120 && secs <= 300) {
+      return {
+        bg: isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff',
+        color: '#2563eb',
+        border: isDarkMode ? '#1e40af' : '#bfdbfe',
+        label: 'Normal'
+      };
+    } else if (secs > 300 && secs <= 900) {
+      return {
+        bg: isDarkMode ? 'rgba(217, 119, 6, 0.2)' : '#fef3c7',
+        color: '#d97706',
+        border: isDarkMode ? '#b45309' : '#fde68a',
+        label: 'Hard'
+      };
+    } else {
       return {
         bg: isDarkMode ? 'rgba(220, 38, 38, 0.2)' : '#fef2f2',
         color: '#dc2626',
@@ -349,12 +388,6 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
         label: 'Excessive'
       };
     }
-    return {
-      bg: isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff',
-      color: '#2563eb',
-      border: isDarkMode ? '#1e40af' : '#bfdbfe',
-      label: 'Normal'
-    };
   };
 
   return (
@@ -375,6 +408,52 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Employee AHT Visibility Toggle Switch Button */}
+          <button
+            onClick={toggleEmployeeAhtVisibility}
+            style={{
+              padding: '9px 14px',
+              background: isEmployeeAhtVisible ? (isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff') : (isDarkMode ? '#334155' : '#f1f5f9'),
+              color: isEmployeeAhtVisible ? '#2563eb' : theme.textMain,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s'
+            }}
+            title="Toggle AHT visibility on employee screens"
+          >
+            {isEmployeeAhtVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+            <span>Employee AHT: {isEmployeeAhtVisible ? 'Visible' : 'Hidden'}</span>
+          </button>
+
+          {/* Toggle Button Integration */}
+          {onToggle && (
+            <button
+              onClick={onToggle}
+              style={{
+                padding: '9px 16px',
+                background: isToggled ? (isDarkMode ? '#065f46' : '#10b981') : (isDarkMode ? '#334155' : '#e2e8f0'),
+                color: isToggled ? '#ffffff' : theme.textMain,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '8px',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Toggle: {isToggled ? 'ON' : 'OFF'}
+            </button>
+          )}
+
           {selectedIds.length > 0 && (
             <button
               onClick={openBulkDeleteModal}
@@ -607,7 +686,7 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
 
       </div>
 
-      {/* Scrollable Table Container */}
+      {/* Scrollable Table Container - AHT Column Permanently Visible in Admin View */}
       <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', border: `1px solid ${theme.border}`, borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '950px' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.theadBg }}>
@@ -621,7 +700,6 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
                 />
               </th>
               
-              {/* Clickable Column Headers for Sorting */}
               <th onClick={() => handleSort('number')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>No. {renderSortIcon('number')}</div>
               </th>
@@ -646,9 +724,12 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
               <th onClick={() => handleSort('end_time')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>End Time {renderSortIcon('end_time')}</div>
               </th>
+              
+              {/* Permanently Visible AHT Column in Admin Table */}
               <th onClick={() => handleSort('aht')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>AHT & Threshold {renderSortIcon('aht')}</div>
               </th>
+
               <th onClick={() => handleSort('created_at')} style={{ padding: '12px 16px', fontWeight: '700', background: theme.theadBg, color: theme.textMuted, cursor: 'pointer', userSelect: 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>Created At {renderSortIcon('created_at')}</div>
               </th>
@@ -658,13 +739,13 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
+                <td colSpan={12} style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
                   Loading enterprise records...
                 </td>
               </tr>
             ) : paginatedLogs.length === 0 ? (
               <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
+                <td colSpan={12} style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
                   {logs.length === 0 
                     ? 'No tracking activity logged across any employee accounts yet.' 
                     : 'No system logs match your selected filter criteria.'}
@@ -693,7 +774,7 @@ export default function AHTMonitoringAdmin({ isDarkMode }) {
                     <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.start_time}</td>
                     <td style={{ padding: '12px 16px', color: theme.textMain }}>{log.end_time}</td>
                     
-                    {/* AHT Column with Performance Threshold Badge */}
+                    {/* Permanently Visible AHT Cell */}
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ color: theme.textMain, fontWeight: '700', fontFamily: 'monospace' }}>

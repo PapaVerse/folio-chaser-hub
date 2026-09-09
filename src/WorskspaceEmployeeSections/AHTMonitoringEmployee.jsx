@@ -1,5 +1,6 @@
+// AHTMonitoringEmployee_2.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Users, Building } from 'lucide-react';
+import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Users, Building, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 
 export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
@@ -9,6 +10,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const cluster = currentUser?.cluster || 'Cluster A';
 
   const STORAGE_SESSION_KEY = `aht_active_session_${eid}`;
+  const STORAGE_VISIBILITY_KEY = 'aht_columns_visibility';
   const hasRecoveredRef = useRef(false);
 
   const [inputValue, setInputValue] = useState('');
@@ -27,37 +29,52 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   });
   const [logs, setLogs] = useState([]);
 
-  // Search, Filter, and Pagination States
+  // Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDate, setFilterDate] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCluster, setFilterCluster] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [filterDate, setFilterDate] = useState('');
 
-  // Dynamic Theme Colors based on isDarkMode prop
-  const theme = {
-    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
-    cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
-    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
-    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
-    inputBg: isDarkMode ? '#0f172a' : '#fff',
-    inputBgDisabled: isDarkMode ? '#1e293b' : '#f1f5f9',
-    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
-    inputColor: isDarkMode ? '#f8fafc' : '#0f172a',
-    activeBoxBg: isDarkMode ? '#172554' : '#eff6ff',
-    activeBoxBorder: isDarkMode ? '#1e3a8a' : '#bfdbfe',
-    tableHeaderBg: isDarkMode ? '#0f172a' : '#f8fafc',
-    tableBorder: isDarkMode ? '#334155' : '#e2e8f0',
-    tableRowBorder: isDarkMode ? '#273548' : '#f1f5f9',
-    tableText: isDarkMode ? '#cbd5e1' : '#334155',
-    tableTextMain: isDarkMode ? '#f8fafc' : '#0f172a',
-    paginationBg: isDarkMode ? '#1e293b' : '#fff',
-    paginationDisabledBg: isDarkMode ? '#0f172a' : '#f1f5f9',
-    paginationDisabledColor: isDarkMode ? '#475569' : '#94a3b8',
-    statCardBg: isDarkMode ? '#0f172a' : '#f8fafc',
-    statCardBorder: isDarkMode ? '#334155' : '#e2e8f0',
-  };
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Column Visibility State synced with localStorage
+  const [columnVisibility, setColumnVisibility] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
+    return saved ? JSON.parse(saved) : {
+      no: true,
+      eid: true,
+      name: true,
+      department: true,
+      cluster: true,
+      input: true,
+      startTime: true,
+      endTime: true,
+      aht: true,
+      createdAt: true
+    };
+  });
+
+  // Listen for storage changes and custom events to sync column visibility instantly across components/tabs
+  useEffect(() => {
+    const handleVisibilitySync = (e) => {
+      if (!e.key || e.key === STORAGE_VISIBILITY_KEY) {
+        const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
+        if (saved) {
+          setColumnVisibility(JSON.parse(saved));
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleVisibilitySync);
+    window.addEventListener('columnVisibilityChanged', handleVisibilitySync);
+
+    return () => {
+      window.removeEventListener('storage', handleVisibilitySync);
+      window.removeEventListener('columnVisibilityChanged', handleVisibilitySync);
+    };
+  }, []);
 
   // Check and recover interrupted active sessions once on mount
   useEffect(() => {
@@ -293,6 +310,32 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const activeEmployeesCount = new Set(logs.map(log => log.eid)).size || (logs.length > 0 ? 1 : 0);
   const totalSystemLogs = logs.length;
 
+  // Dynamic Theme Colors based on isDarkMode prop
+  const theme = {
+    cardBg: isDarkMode ? '#1e293b' : '#ffffff',
+    cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    titleMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    titleSub: isDarkMode ? '#94a3b8' : '#64748b',
+    inputBg: isDarkMode ? '#0f172a' : '#fff',
+    inputBgDisabled: isDarkMode ? '#1e293b' : '#f1f5f9',
+    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
+    inputColor: isDarkMode ? '#f8fafc' : '#0f172a',
+    activeBoxBg: isDarkMode ? '#172554' : '#eff6ff',
+    activeBoxBorder: isDarkMode ? '#1e3a8a' : '#bfdbfe',
+    tableHeaderBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    tableBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    tableRowBorder: isDarkMode ? '#273548' : '#f1f5f9',
+    tableText: isDarkMode ? '#cbd5e1' : '#334155',
+    tableTextMain: isDarkMode ? '#f8fafc' : '#0f172a',
+    paginationBg: isDarkMode ? '#1e293b' : '#fff',
+    paginationDisabledBg: isDarkMode ? '#0f172a' : '#f1f5f9',
+    paginationDisabledColor: isDarkMode ? '#475569' : '#94a3b8',
+    statCardBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    statCardBorder: isDarkMode ? '#334155' : '#334155',
+  };
+
+  const visibleColumnCount = Object.values(columnVisibility).filter(Boolean).length;
+
   return (
     <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
       
@@ -318,17 +361,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
           <div>
             <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Inputs Today</span>
             <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{totalInputsToday}</span>
-          </div>
-        </div>
-
-        {/* Card 3: Active Employees Monitored */}
-        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: isDarkMode ? '#451a03' : '#fffbeb', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={22} color={isDarkMode ? '#fcd34d' : '#d97706'} />
-          </div>
-          <div>
-            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Active Employees Monitored</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{activeEmployeesCount}</span>
           </div>
         </div>
 
@@ -407,7 +439,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
             </div>
             <div>
               <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>{formatTimer(elapsedSeconds)}</span>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>running...</span>
             </div>
           </div>
 
@@ -443,8 +475,8 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
           {/* Search, Date, Department, and Cluster Filter Controls */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             
-            {/* Search Input */}
-            <div style={{ position: 'relative' }}>
+            {/* Search Input - Made Wider */}
+            <div style={{ position: 'relative', width: '260px', maxWidth: '100%' }}>
               <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 type="text"
@@ -457,7 +489,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                   border: `1px solid ${theme.inputBorder}`, 
                   fontSize: '13px', 
                   outline: 'none',
-                  width: '180px',
+                  width: '100%',
                   boxSizing: 'border-box',
                   background: theme.inputBg,
                   color: theme.inputColor
@@ -473,45 +505,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
               )}
             </div>
 
-            {/* Department Filter Select */}
-            <select
-              value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.inputBorder}`,
-                fontSize: '13px',
-                outline: 'none',
-                background: theme.inputBg,
-                color: filterDepartment ? theme.titleMain : theme.titleSub
-              }}
-            >
-              <option value="">All Departments</option>
-              {uniqueDepartments.map((dept, idx) => (
-                <option key={idx} value={dept}>{dept}</option>
-              ))}
-            </select>
-
-            {/* Cluster Filter Select */}
-            <select
-              value={filterCluster}
-              onChange={(e) => setFilterCluster(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.inputBorder}`,
-                fontSize: '13px',
-                outline: 'none',
-                background: theme.inputBg,
-                color: filterCluster ? theme.titleMain : theme.titleSub
-              }}
-            >
-              <option value="">All Clusters</option>
-              {uniqueClusters.map((clusterName, idx) => (
-                <option key={idx} value={clusterName}>{clusterName}</option>
-              ))}
-            </select>
 
             {/* Date Filter */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -549,22 +542,22 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '850px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.tableHeaderBg }}>
               <tr style={{ borderBottom: `1px solid ${theme.tableBorder}`, color: theme.titleSub }}>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>No.</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>EID</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Name</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Department</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Cluster</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>
+                {columnVisibility.no && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>No.</th>}
+                {columnVisibility.eid && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>EID</th>}
+                {columnVisibility.name && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Name</th>}
+                {columnVisibility.department && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Department</th>}
+                {columnVisibility.cluster && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Cluster</th>}
+                {columnVisibility.input && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>}
+                {columnVisibility.startTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>}
+                {columnVisibility.endTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>}
+                {columnVisibility.aht && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>}
+                {columnVisibility.createdAt && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>}
               </tr>
             </thead>
             <tbody>
               {paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: theme.titleSub }}>
+                  <td colSpan={visibleColumnCount || 10} style={{ textAlign: 'center', padding: '40px', color: theme.titleSub }}>
                     {logs.length === 0 
                       ? 'No completed sessions logged yet for your account. Start a tracking session above.' 
                       : 'No logs match your search or filter criteria.'}
@@ -573,16 +566,16 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
               ) : (
                 paginatedLogs.map((log, index) => (
                   <tr key={index} style={{ borderBottom: `1px solid ${theme.tableRowBorder}` }}>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.number}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.name, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.department, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.cluster, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>
-                    <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>
-                    <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>
-                    <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>
+                    {columnVisibility.no && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.number}</td>}
+                    {columnVisibility.eid && <td style={{ padding: '12px 16px', color: theme.tableText, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>}
+                    {columnVisibility.name && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.name, searchQuery)}</td>}
+                    {columnVisibility.department && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.department, searchQuery)}</td>}
+                    {columnVisibility.cluster && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.cluster, searchQuery)}</td>}
+                    {columnVisibility.input && <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>}
+                    {columnVisibility.startTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>}
+                    {columnVisibility.endTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>}
+                    {columnVisibility.aht && <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>}
+                    {columnVisibility.createdAt && <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>}
                   </tr>
                 ))
               )}
