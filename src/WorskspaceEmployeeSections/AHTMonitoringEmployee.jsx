@@ -441,7 +441,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
             </div>
             <div>
               <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>{formatTimer(elapsedSeconds)}</span>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>running...</span>
             </div>
           </div>
 
@@ -552,7 +552,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                 {columnVisibility.input && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>}
                 {columnVisibility.startTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>}
                 {columnVisibility.endTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>}
-                {columnVisibility.aht && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>}
+                {/*{columnVisibility.aht && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>}*/}
                 {columnVisibility.createdAt && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>}
               </tr>
             </thead>
@@ -576,7 +576,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                     {columnVisibility.input && <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>}
                     {columnVisibility.startTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>}
                     {columnVisibility.endTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>}
-                    {columnVisibility.aht && <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>}
+                    {/*{columnVisibility.aht && <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>}*/}
                     {columnVisibility.createdAt && <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>}
                   </tr>
                 ))
