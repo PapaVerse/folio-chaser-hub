@@ -40,20 +40,22 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Column Visibility State synced with localStorage
+  const defaultColumns = {
+    no: true,
+    eid: true,
+    name: true,
+    department: true,
+    cluster: true,
+    input: true,
+    startTime: true,
+    endTime: true,
+    aht: true,
+    createdAt: true
+  };
+
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
-    return saved ? JSON.parse(saved) : {
-      no: true,
-      eid: true,
-      name: true,
-      department: true,
-      cluster: true,
-      input: true,
-      startTime: true,
-      endTime: true,
-      aht: true,
-      createdAt: true
-    };
+    return saved ? { ...defaultColumns, ...JSON.parse(saved) } : defaultColumns;
   });
 
   // Listen for storage changes and custom events to sync column visibility instantly across components/tabs
@@ -62,7 +64,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
       if (!e.key || e.key === STORAGE_VISIBILITY_KEY) {
         const saved = localStorage.getItem(STORAGE_VISIBILITY_KEY);
         if (saved) {
-          setColumnVisibility(JSON.parse(saved));
+          setColumnVisibility({ ...defaultColumns, ...JSON.parse(saved) });
         }
       }
     };
