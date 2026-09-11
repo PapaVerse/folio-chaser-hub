@@ -1,4 +1,4 @@
-// AHTMonitoringEmployee_2.jsx
+// AHTMonitoringEmployee.jsx
 import { useState, useEffect, useRef } from 'react';
 import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Users, Building, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
@@ -439,7 +439,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
             </div>
             <div>
               <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>running...</span>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>{formatTimer(elapsedSeconds)}</span>
             </div>
           </div>
 
