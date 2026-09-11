@@ -409,7 +409,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Employee AHT Visibility Toggle Switch Button */}
-          <button
+          {/*<button
             onClick={toggleEmployeeAhtVisibility}
             style={{
               padding: '9px 14px',
@@ -429,7 +429,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
           >
             {isEmployeeAhtVisible ? <Eye size={15} /> : <EyeOff size={15} />}
             <span>Employee AHT: {isEmployeeAhtVisible ? 'Visible' : 'Hidden'}</span>
-          </button>
+          </button>*/}
 
           {/* Toggle Button Integration */}
           {onToggle && (
