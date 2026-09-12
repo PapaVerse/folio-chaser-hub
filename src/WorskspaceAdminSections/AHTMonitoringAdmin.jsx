@@ -1,6 +1,6 @@
 // AHTMonitoringAdmin.jsx
 import { useState, useEffect } from 'react';
-import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers, ArrowUpDown, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
+import { Clock, Search, Calendar, X, ChevronLeft, ChevronRight, Download, Users, Trash2, AlertTriangle, Loader2, Building, Layers, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 import * as XLSX from 'xlsx';
 
@@ -10,7 +10,10 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
 
   // Search, Filter, and Pagination States
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterStartTime, setFilterStartTime] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterEndTime, setFilterEndTime] = useState('');
   const [filterEid, setFilterEid] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCluster, setFilterCluster] = useState('');
@@ -183,7 +186,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
     return formatSecondsToAht(totalSecs / logs.length);
   })();
 
-  // Filter logs based on search query, date, employee, department, and cluster
+  // Filter logs based on search query, date/time range, employee, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
       log.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -193,10 +196,34 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
       log.cluster.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.aht.toLowerCase().includes(searchQuery.toLowerCase());
 
-    let matchesDate = true;
-    if (filterDate) {
-      const logDateOnly = new Date(log.raw_created_at).toISOString().split('T')[0];
-      matchesDate = logDateOnly === filterDate;
+    let matchesRange = true;
+    if (filterStartDate || filterStartTime || filterEndDate || filterEndTime) {
+      const logDateTime = new Date(log.raw_created_at);
+      
+      if (filterStartDate) {
+        const startDateTimeStr = filterStartTime ? `${filterStartDate}T${filterStartTime}:00` : `${filterStartDate}T00:00:00`;
+        if (logDateTime < new Date(startDateTimeStr)) {
+          matchesRange = false;
+        }
+      } else if (filterStartTime) {
+        // If only start time is provided, compare time portion on log creation date or general time
+        const logTimeStr = logDateTime.toTimeString().slice(0, 8);
+        if (logTimeStr < `${filterStartTime}:00`) {
+          matchesRange = false;
+        }
+      }
+
+      if (filterEndDate) {
+        const endDateTimeStr = filterEndTime ? `${filterEndDate}T${filterEndTime}:59` : `${filterEndDate}T23:59:59`;
+        if (logDateTime > new Date(endDateTimeStr)) {
+          matchesRange = false;
+        }
+      } else if (filterEndTime) {
+        const logTimeStr = logDateTime.toTimeString().slice(0, 8);
+        if (logTimeStr > `${filterEndTime}:59`) {
+          matchesRange = false;
+        }
+      }
     }
 
     let matchesEid = true;
@@ -214,7 +241,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
       matchesCluster = log.cluster === filterCluster;
     }
 
-    return matchesSearch && matchesDate && matchesEid && matchesDepartment && matchesCluster;
+    return matchesSearch && matchesRange && matchesEid && matchesDepartment && matchesCluster;
   });
 
   // Sorting Handler
@@ -250,7 +277,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
   // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterDate, filterEid, filterDepartment, filterCluster, itemsPerPage]);
+  }, [searchQuery, filterStartDate, filterStartTime, filterEndDate, filterEndTime, filterEid, filterDepartment, filterCluster, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(sortedLogs.length / itemsPerPage) || 1;
@@ -408,29 +435,6 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Employee AHT Visibility Toggle Switch Button */}
-          {/*<button
-            onClick={toggleEmployeeAhtVisibility}
-            style={{
-              padding: '9px 14px',
-              background: isEmployeeAhtVisible ? (isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff') : (isDarkMode ? '#334155' : '#f1f5f9'),
-              color: isEmployeeAhtVisible ? '#2563eb' : theme.textMain,
-              border: `1px solid ${theme.border}`,
-              borderRadius: '8px',
-              fontWeight: '600',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s'
-            }}
-            title="Toggle AHT visibility on employee screens"
-          >
-            {isEmployeeAhtVisible ? <Eye size={15} /> : <EyeOff size={15} />}
-            <span>Employee AHT: {isEmployeeAhtVisible ? 'Visible' : 'Hidden'}</span>
-          </button>*/}
-
           {/* Toggle Button Integration */}
           {onToggle && (
             <button
@@ -534,20 +538,20 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
           </div>
         </div>
 
-        {/* KPI Card 4: Total System Records */}
+        {/* KPI Card 4: Total System Records / Count */}
         <div style={{ background: theme.kpiBg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ background: isDarkMode ? 'rgba(147, 51, 234, 0.2)' : '#f3e8ff', color: '#9333ea', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Building size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Total System Logs</div>
-            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain }}>{totalRecordsCount}</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: theme.textMuted, marginBottom: '2px' }}>Count (Filtered / Total)</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: theme.textMain }}>{sortedLogs.length} / {totalRecordsCount}</div>
           </div>
         </div>
 
       </div>
 
-      {/* Filter Toolbar */}
+      {/* Filter Toolbar matching exact date/time range inputs reference */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', background: theme.filterBarBg, padding: '14px', borderRadius: '10px', border: `1px solid ${theme.border}` }}>
         
         {/* Employee Dropdown Filter */}
@@ -564,7 +568,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
               background: theme.inputBg, 
               fontSize: '13px',
               color: filterEid ? theme.textMain : theme.textMuted,
-              minWidth: '160px',
+              minWidth: '150px',
               boxSizing: 'border-box'
             }}
           >
@@ -589,7 +593,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
               background: theme.inputBg, 
               fontSize: '13px',
               color: filterDepartment ? theme.textMain : theme.textMuted,
-              minWidth: '160px',
+              minWidth: '150px',
               boxSizing: 'border-box'
             }}
           >
@@ -614,7 +618,7 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
               background: theme.inputBg, 
               fontSize: '13px',
               color: filterCluster ? theme.textMain : theme.textMuted,
-              minWidth: '150px',
+              minWidth: '140px',
               boxSizing: 'border-box'
             }}
           >
@@ -625,37 +629,64 @@ export default function AHTMonitoringAdmin({ isDarkMode, isToggled, onToggle }) 
           </select>
         </div>
 
-        {/* Date Filter */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Calendar size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+        {/* Start Date & Time Filter Box (Matching reference style: mm/dd/yyyy --:-- -- icon) */}
+        <div style={{ display: 'flex', alignItems: 'center', background: theme.inputBg, border: `1px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
+          <Calendar size={16} color={theme.textMuted} />
           <input 
             type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            style={{ 
-              padding: '7px 12px 7px 32px', 
-              borderRadius: '6px', 
-              border: `1px solid ${theme.inputBorder}`, 
-              fontSize: '13px', 
-              outline: 'none',
-              color: filterDate ? theme.textMain : theme.textMuted,
-              background: theme.inputBg,
-              boxSizing: 'border-box'
-            }}
+            value={filterStartDate}
+            onChange={(e) => setFilterStartDate(e.target.value)}
+            title="Start Date"
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: filterStartDate ? theme.textMain : theme.textMuted, fontSize: '13px', cursor: 'pointer' }}
           />
-          {filterDate && (
+          <input 
+            type="time"
+            value={filterStartTime}
+            onChange={(e) => setFilterStartTime(e.target.value)}
+            title="Start Time"
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: filterStartTime ? theme.textMain : theme.textMuted, fontSize: '13px', cursor: 'pointer' }}
+          />
+          {(filterStartDate || filterStartTime) && (
             <button 
-              onClick={() => setFilterDate('')}
-              title="Clear Date Filter"
-              style={{ marginLeft: '6px', background: isDarkMode ? '#334155' : '#f1f5f9', border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
+              onClick={() => { setFilterStartDate(''); setFilterStartTime(''); }}
+              title="Clear Start Date/Time"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
             >
-              <X size={13} color={theme.textMuted} />
+              <X size={14} color={theme.textMuted} />
+            </button>
+          )}
+        </div>
+
+        {/* End Date & Time Filter Box (Matching reference style: mm/dd/yyyy --:-- -- icon) */}
+        <div style={{ display: 'flex', alignItems: 'center', background: theme.inputBg, border: `1px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
+          <Calendar size={16} color={theme.textMuted} />
+          <input 
+            type="date"
+            value={filterEndDate}
+            onChange={(e) => setFilterEndDate(e.target.value)}
+            title="End Date"
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: filterEndDate ? theme.textMain : theme.textMuted, fontSize: '13px', cursor: 'pointer' }}
+          />
+          <input 
+            type="time"
+            value={filterEndTime}
+            onChange={(e) => setFilterEndTime(e.target.value)}
+            title="End Time"
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: filterEndTime ? theme.textMain : theme.textMuted, fontSize: '13px', cursor: 'pointer' }}
+          />
+          {(filterEndDate || filterEndTime) && (
+            <button 
+              onClick={() => { setFilterEndDate(''); setFilterEndTime(''); }}
+              title="Clear End Date/Time"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+            >
+              <X size={14} color={theme.textMuted} />
             </button>
           )}
         </div>
 
         {/* Search Bar */}
-        <div style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
+        <div style={{ position: 'relative', flex: '1 1 160px', minWidth: '150px' }}>
           <Search size={15} color={theme.textMuted} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input 
             type="text"

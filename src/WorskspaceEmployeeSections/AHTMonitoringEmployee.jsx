@@ -33,7 +33,8 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCluster, setFilterCluster] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterFromDateTime, setFilterFromDateTime] = useState('');
+  const [filterToDateTime, setFilterToDateTime] = useState('');
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -255,7 +256,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
   const uniqueDepartments = [...new Set(logs.map(log => log.department))];
   const uniqueClusters = [...new Set(logs.map(log => log.cluster))];
 
-  // Filter logs based on search query, selected date, department, and cluster
+  // Filter logs based on search query, selected date-time range, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
       log.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -265,22 +266,29 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
       log.cluster.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.aht.toLowerCase().includes(searchQuery.toLowerCase());
 
-    let matchesDate = true;
-    if (filterDate) {
-      const logDateOnly = new Date(log.raw_created_at).toISOString().split('T')[0];
-      matchesDate = logDateOnly === filterDate;
+    let matchesDateTime = true;
+    if (log.raw_created_at) {
+      const logTime = new Date(log.raw_created_at).getTime();
+      if (filterFromDateTime) {
+        const fromTime = new Date(filterFromDateTime).getTime();
+        if (logTime < fromTime) matchesDateTime = false;
+      }
+      if (filterToDateTime) {
+        const toTime = new Date(filterToDateTime).getTime();
+        if (logTime > toTime) matchesDateTime = false;
+      }
     }
 
     const matchesDepartment = filterDepartment ? log.department === filterDepartment : true;
     const matchesCluster = filterCluster ? log.cluster === filterCluster : true;
 
-    return matchesSearch && matchesDate && matchesDepartment && matchesCluster;
+    return matchesSearch && matchesDateTime && matchesDepartment && matchesCluster;
   });
 
   // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterDate, filterDepartment, filterCluster, itemsPerPage]);
+  }, [searchQuery, filterFromDateTime, filterToDateTime, filterDepartment, filterCluster, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
@@ -441,7 +449,25 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
             </div>
             <div>
               <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: isDarkMode ? '#93c5fd' : '#2563eb', fontFamily: 'monospace' }}>running...</span>
+              <span 
+                style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '800', 
+                  color: isDarkMode ? '#93c5fd' : '#2563eb', 
+                  fontFamily: 'monospace',
+                  animation: 'blink 1.5s ease-in-out infinite',
+                }}
+              >
+                <style>
+                  {`
+                    @keyframes blink {
+                      0%, 100% { opacity: 1; }
+                      50% { opacity: 0.3; }
+                    }
+                  `}
+                </style>
+                running...
+              </span>
             </div>
           </div>
 
@@ -470,15 +496,21 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
       {/* History Log Section */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <Clock size={18} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> AHT Activity Log ({name})
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Clock size={18} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> AHT Activity Log ({name})
+            </h3>
+            {/* Filtered Count Badge */}
+            <span style={{ fontSize: '12px', fontWeight: '600', background: isDarkMode ? '#334155' : '#e2e8f0', color: theme.titleMain, padding: '2px 8px', borderRadius: '12px' }}>
+              Filtered Count: {filteredLogs.length}
+            </span>
+          </div>
 
-          {/* Search, Date, Department, and Cluster Filter Controls */}
+          {/* Search, Date-Time Range Filter Controls */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             
-            {/* Search Input - Made Wider */}
-            <div style={{ position: 'relative', width: '260px', maxWidth: '100%' }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', width: '220px', maxWidth: '100%' }}>
               <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 type="text"
@@ -507,35 +539,66 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
               )}
             </div>
 
-
-            {/* Date Filter */}
+            {/* From Date & Time Filter */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
               <input 
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
+                type="datetime-local"
+                title="From Date & Time"
+                value={filterFromDateTime}
+                onChange={(e) => setFilterFromDateTime(e.target.value)}
                 style={{ 
                   padding: '7px 12px 7px 32px', 
                   borderRadius: '6px', 
                   border: `1px solid ${theme.inputBorder}`, 
                   fontSize: '13px', 
                   outline: 'none',
-                  color: filterDate ? theme.titleMain : theme.titleSub,
+                  color: filterFromDateTime ? theme.titleMain : theme.titleSub,
                   background: theme.inputBg,
                   boxSizing: 'border-box'
                 }}
               />
-              {filterDate && (
+              {filterFromDateTime && (
                 <button 
-                  onClick={() => setFilterDate('')}
-                  title="Clear Date Filter"
+                  onClick={() => setFilterFromDateTime('')}
+                  title="Clear From Date & Time"
                   style={{ marginLeft: '6px', background: theme.inputBgDisabled, border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
                 >
                   <X size={13} color={theme.titleSub} />
                 </button>
               )}
             </div>
+
+            {/* To Date & Time Filter */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
+              <input 
+                type="datetime-local"
+                title="To Date & Time"
+                value={filterToDateTime}
+                onChange={(e) => setFilterToDateTime(e.target.value)}
+                style={{ 
+                  padding: '7px 12px 7px 32px', 
+      borderRadius: '6px', 
+                  border: `1px solid ${theme.inputBorder}`, 
+                  fontSize: '13px', 
+                  outline: 'none',
+                  color: filterToDateTime ? theme.titleMain : theme.titleSub,
+                  background: theme.inputBg,
+                  boxSizing: 'border-box'
+                }}
+              />
+              {filterToDateTime && (
+                <button 
+                  onClick={() => setFilterToDateTime('')}
+                  title="Clear To Date & Time"
+                  style={{ marginLeft: '6px', background: theme.inputBgDisabled, border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
+                >
+                  <X size={13} color={theme.titleSub} />
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -552,7 +615,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                 {columnVisibility.input && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>}
                 {columnVisibility.startTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>}
                 {columnVisibility.endTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>}
-                {/*{columnVisibility.aht && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>AHT</th>}*/}
                 {columnVisibility.createdAt && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>}
               </tr>
             </thead>
@@ -576,7 +638,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                     {columnVisibility.input && <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>}
                     {columnVisibility.startTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>}
                     {columnVisibility.endTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>}
-                    {/*{columnVisibility.aht && <td style={{ padding: '12px 16px', color: isDarkMode ? '#93c5fd' : '#2563eb', fontWeight: '700', fontFamily: 'monospace' }}>{highlightText(log.aht, searchQuery)}</td>}*/}
                     {columnVisibility.createdAt && <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>}
                   </tr>
                 ))
