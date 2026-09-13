@@ -1,3 +1,4 @@
+// WorkspaceDashboardEmployee.jsx
 import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
@@ -20,6 +21,7 @@ import KnowledgeGuidelineEmployee from './WorskspaceEmployeeSections/KnowledgeGu
 import EmployeeProfile from "./WorskspaceEmployeeSections/EmployeeProfile";
 import ScheduleEmployee from "./WorskspaceEmployeeSections/ScheduleEmployee";
 import ScoreboardEmployee from "./WorskspaceEmployeeSections/ScoreboardEmployee";
+import WorkspaceDashboardEmployeeDisplay from "./WorskspaceEmployeeSections/WorkspaceDashboardEmployeeDisplay";
 
 export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDarkMode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -293,22 +295,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDa
           {activeNav === 'scoreboard' && <ScoreboardEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'guidelines' && <KnowledgeGuidelineEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'teamProfile' && <EmployeeProfile isDarkMode={isDarkMode} />}
-          
-          {activeNav === 'dashboard' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <div style={{ background: theme.placeholderCardBg, padding: '50px 20px', borderRadius: '16px', border: `1px solid ${theme.placeholderCardBorder}`, textAlign: 'center', maxWidth: '500px', width: '100%', boxSizing: 'border-box', boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
-                <div style={{ width: '48px', height: '48px', background: theme.placeholderIconBg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.placeholderIconColor, margin: '0 auto 20px auto' }}>
-                  <Info size={24} />
-                </div>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: theme.titleMain, textTransform: 'capitalize' }}>
-                  {activeNav} Module
-                </h3>
-                <p style={{ margin: 0, color: theme.titleSub, fontSize: '14px', lineHeight: '1.5' }}>
-                  Data will display in here soon. Content for this section is currently under development.
-                </p>
-              </div>
-            </div>
-          )}
+          {activeNav === 'dashboard' && <WorkspaceDashboardEmployeeDisplay currentEmployeeEid={displayEid} isDarkMode={isDarkMode} />}
         </div>
 
       </div>
