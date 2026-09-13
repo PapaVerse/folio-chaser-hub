@@ -19,6 +19,7 @@ import AHTMonitoringEmployee from './WorskspaceEmployeeSections/AHTMonitoringEmp
 import KnowledgeGuidelineEmployee from './WorskspaceEmployeeSections/KnowledgeGuidelineEmployee';
 import EmployeeProfile from "./WorskspaceEmployeeSections/EmployeeProfile";
 import ScheduleEmployee from "./WorskspaceEmployeeSections/ScheduleEmployee";
+import ScoreboardEmployee from "./WorskspaceEmployeeSections/ScoreboardEmployee";
 
 export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDarkMode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -248,7 +249,7 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDa
             )}
             <div>
               <h1 style={{ margin: '0 0 2px 0', fontSize: isMobile ? '16px' : '20px', fontWeight: '800', color: theme.titleMain, textTransform: 'capitalize' }}>
-                {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : (activeNav === 'guidelines' ? 'Knowledge Base & Guidelines' : (activeNav === 'teamProfile' ? "Team's Profile" : (activeNav === 'schedule' ? 'Schedule' : activeNav)))}
+                {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : (activeNav === 'guidelines' ? 'Knowledge Base & Guidelines' : (activeNav === 'teamProfile' ? "Team's Profile" : (activeNav === 'schedule' ? 'Schedule' : (activeNav === 'scoreboard' ? 'Scoreboard' : activeNav))))}
               </h1>
               {!isMobile && <p style={{ margin: 0, color: theme.titleSub, fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>}
             </div>
@@ -289,10 +290,11 @@ export default function WorkspaceDashboardEmployee({ currentUser, onLogout, isDa
         <div style={{ padding: isMobile ? '16px' : '40px', flex: 1, boxSizing: 'border-box', overflowX: 'hidden' }}>
           {activeNav === 'schedule' && <ScheduleEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'aht-monitoring' && <AHTMonitoringEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
+          {activeNav === 'scoreboard' && <ScoreboardEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'guidelines' && <KnowledgeGuidelineEmployee currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'teamProfile' && <EmployeeProfile isDarkMode={isDarkMode} />}
           
-          {(activeNav === 'dashboard' || activeNav === 'scoreboard') && (
+          {activeNav === 'dashboard' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <div style={{ background: theme.placeholderCardBg, padding: '50px 20px', borderRadius: '16px', border: `1px solid ${theme.placeholderCardBorder}`, textAlign: 'center', maxWidth: '500px', width: '100%', boxSizing: 'border-box', boxShadow: isDarkMode ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
                 <div style={{ width: '48px', height: '48px', background: theme.placeholderIconBg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.placeholderIconColor, margin: '0 auto 20px auto' }}>

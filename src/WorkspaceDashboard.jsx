@@ -8,7 +8,6 @@ import {
   LogOut, 
   PanelLeftClose, 
   PanelLeftOpen, 
-  Info, 
   User as UserIcon,
   ShieldCheck,
   BookOpen,
@@ -24,6 +23,7 @@ import KnowledgeGuidelineAdmin from './WorskspaceAdminSections/KnowledgeGuidelin
 import WorkspaceDashboardDisplay from './WorskspaceAdminSections/WorkspaceDashboardDisplay';
 import AdminProfile from './WorskspaceAdminSections/AdminProfile';
 import ScheduleAdmin from './WorskspaceAdminSections/ScheduleAdmin';
+import Scoreboard from './WorskspaceAdminSections/Scoreboard';
 
 export default function WorkspaceDashboard({ currentUser, onLogout, isDarkMode, toggleTheme }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -184,7 +184,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout, isDarkMode, 
         <div style={{ background: theme.cardBg, padding: '20px 32px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
           <div>
             <h1 style={{ margin: '0 0 2px 0', fontSize: '20px', fontWeight: '800', color: theme.textMain, textTransform: 'capitalize' }}>
-              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav === 'knowledge-guidelines' ? 'Knowledge Base & SOP Guidelines' : activeNav === 'admin-profile' ? "Team's Profile Hierarchy" : activeNav === 'schedule' ? 'Schedule & Calendar Events' : activeNav.replace('-', ' ')}
+              {activeNav === 'aht-monitoring' ? 'AHT Monitoring' : activeNav === 'knowledge-guidelines' ? 'Knowledge Base & SOP Guidelines' : activeNav === 'admin-profile' ? "Team's Profile Hierarchy" : activeNav === 'schedule' ? 'Schedule & Calendar Events' : activeNav === 'scoreboard' ? 'Performance Scoreboard' : activeNav.replace('-', ' ')}
             </h1>
             <p style={{ margin: 0, color: theme.textMuted, fontSize: '12px' }}>Efficiency, Performance, and Streamlined Operations</p>
           </div>
@@ -252,22 +252,7 @@ export default function WorkspaceDashboard({ currentUser, onLogout, isDarkMode, 
           {activeNav === 'aht-monitoring' && <AHTMonitoringAdmin isDarkMode={isDarkMode} />}
           {activeNav === 'knowledge-guidelines' && <KnowledgeGuidelineAdmin currentUser={currentUser} isDarkMode={isDarkMode} />}
           {activeNav === 'admin-profile' && <AdminProfile isDarkMode={isDarkMode} />}
-          
-          {activeNav === 'scoreboard' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <div style={{ background: theme.cardBg, padding: '50px 40px', borderRadius: '16px', border: `1px solid ${theme.border}`, textAlign: 'center', maxWidth: '500px', width: '100%', boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.02)', transition: 'background 0.3s ease, border-color 0.3s ease' }}>
-                <div style={{ width: '48px', height: '48px', background: theme.activeNavBg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.activeNavText, margin: '0 auto 20px auto' }}>
-                  <Info size={24} />
-                </div>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: theme.textMain, textTransform: 'capitalize' }}>
-                  Scoreboard Module
-                </h3>
-                <p style={{ margin: 0, color: theme.textMuted, fontSize: '14px', lineHeight: '1.5' }}>
-                  Data will display in here soon. Content for this section is currently under development.
-                </p>
-              </div>
-            </div>
-          )}
+          {activeNav === 'scoreboard' && <Scoreboard isDarkMode={isDarkMode} />}
         </div>
 
       </div>

@@ -1,6 +1,6 @@
 // AHTMonitoringEmployee.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Users, Building, Eye, EyeOff } from 'lucide-react';
+import { Play, Square, Clock, Search, Calendar, X, ChevronLeft, ChevronRight, BarChart2, Layers, Building } from 'lucide-react';
 import { supabase } from '../supabaseClient'; 
 
 export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
@@ -38,7 +38,7 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Column Visibility State synced with localStorage
   const defaultColumns = {
@@ -59,7 +59,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     return saved ? { ...defaultColumns, ...JSON.parse(saved) } : defaultColumns;
   });
 
-  // Listen for storage changes and custom events to sync column visibility instantly across components/tabs
   useEffect(() => {
     const handleVisibilitySync = (e) => {
       if (!e.key || e.key === STORAGE_VISIBILITY_KEY) {
@@ -79,7 +78,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     };
   }, []);
 
-  // Check and recover interrupted active sessions once on mount
   useEffect(() => {
     if (eid && !hasRecoveredRef.current) {
       hasRecoveredRef.current = true;
@@ -165,7 +163,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     }
   };
 
-  // Keep localStorage updated when session changes
   useEffect(() => {
     if (activeSession) {
       localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(activeSession));
@@ -174,7 +171,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     }
   }, [activeSession]);
 
-  // Timer interval effect when a session is active
   useEffect(() => {
     let timer;
     if (activeSession) {
@@ -239,7 +235,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     setElapsedSeconds(0);
   };
 
-  // Highlight matching query text helper function
   const highlightText = (text, query) => {
     if (!query) return text;
     const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
@@ -252,11 +247,6 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     );
   };
 
-  // Extract unique departments and clusters for dynamic filter dropdown options
-  const uniqueDepartments = [...new Set(logs.map(log => log.department))];
-  const uniqueClusters = [...new Set(logs.map(log => log.cluster))];
-
-  // Filter logs based on search query, selected date-time range, department, and cluster
   const filteredLogs = logs.filter((log) => {
     const matchesSearch = 
       log.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -285,17 +275,14 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     return matchesSearch && matchesDateTime && matchesDepartment && matchesCluster;
   });
 
-  // Reset to page 1 whenever filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterFromDateTime, filterToDateTime, filterDepartment, filterCluster, itemsPerPage]);
 
-  // Pagination calculations
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
-  // Statistics calculations for the top metric cards
   const calculateAverageAHT = () => {
     if (logs.length === 0) return '00:00';
     let totalSecs = 0;
@@ -317,10 +304,8 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     return new Date(log.raw_created_at).toLocaleDateString() === todayStr;
   }).length;
 
-  const activeEmployeesCount = new Set(logs.map(log => log.eid)).size || (logs.length > 0 ? 1 : 0);
   const totalSystemLogs = logs.length;
 
-  // Dynamic Theme Colors based on isDarkMode prop
   const theme = {
     cardBg: isDarkMode ? '#1e293b' : '#ffffff',
     cardBorder: isDarkMode ? '#334155' : '#e2e8f0',
@@ -328,67 +313,62 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
     titleSub: isDarkMode ? '#94a3b8' : '#64748b',
     inputBg: isDarkMode ? '#0f172a' : '#fff',
     inputBgDisabled: isDarkMode ? '#1e293b' : '#f1f5f9',
-    inputBorder: isDarkMode ? '#475569' : '#cbd5e1',
+    inputBorder: isDarkMode ? '#334155' : '#cbd5e1',
     inputColor: isDarkMode ? '#f8fafc' : '#0f172a',
     activeBoxBg: isDarkMode ? '#172554' : '#eff6ff',
     activeBoxBorder: isDarkMode ? '#1e3a8a' : '#bfdbfe',
-    tableHeaderBg: isDarkMode ? '#0f172a' : '#f8fafc',
+    tableHeaderBg: isDarkMode ? '#111827' : '#f8fafc',
     tableBorder: isDarkMode ? '#334155' : '#e2e8f0',
     tableRowBorder: isDarkMode ? '#273548' : '#f1f5f9',
     tableText: isDarkMode ? '#cbd5e1' : '#334155',
     tableTextMain: isDarkMode ? '#f8fafc' : '#0f172a',
-    paginationBg: isDarkMode ? '#1e293b' : '#fff',
-    paginationDisabledBg: isDarkMode ? '#0f172a' : '#f1f5f9',
-    paginationDisabledColor: isDarkMode ? '#475569' : '#94a3b8',
+    paginationDisabledBg: isDarkMode ? '#334155' : '#f1f5f9',
+    paginationDisabledColor: isDarkMode ? '#64748b' : '#94a3b8',
     statCardBg: isDarkMode ? '#0f172a' : '#f8fafc',
-    statCardBorder: isDarkMode ? '#334155' : '#334155',
+    statCardBorder: isDarkMode ? '#334155' : '#e2e8f0',
+    filterBarBg: isDarkMode ? '#0f172a' : '#f8fafc',
   };
 
   const visibleColumnCount = Object.values(columnVisibility).filter(Boolean).length;
 
   return (
-    <div style={{ background: theme.cardBg, padding: 'clamp(15px, 3vw, 30px)', borderRadius: '16px', border: `1px solid ${theme.cardBorder}`, minHeight: '500px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
+    <div style={{ background: theme.cardBg, padding: 'clamp(12px, 2vw, 20px)', borderRadius: '12px', border: `1px solid ${theme.cardBorder}`, minHeight: '450px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden', boxShadow: isDarkMode ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 2px 4px -1px rgba(0, 0, 0, 0.02)' }}>
       
-      {/* Metrics Summary Cards Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        
-        {/* Card 1: Average AHT */}
-        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: isDarkMode ? '#172554' : '#eff6ff', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BarChart2 size={22} color={isDarkMode ? '#93c5fd' : '#2563eb'} />
+      {/* Compact KPI Metrics Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff', color: '#2563eb', padding: '8px', borderRadius: '6px' }}>
+            <BarChart2 size={16} />
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Average AHT (All Records)</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain, fontFamily: 'monospace' }}>{calculateAverageAHT()}</span>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: theme.titleSub }}>Average AHT</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: theme.titleMain, fontFamily: 'monospace' }}>{calculateAverageAHT()}</div>
           </div>
         </div>
 
-        {/* Card 2: Total Inputs Today */}
-        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: isDarkMode ? '#064e3b' : '#ecfdf5', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={22} color={isDarkMode ? '#6ee7b7' : '#059669'} />
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5', color: '#10b981', padding: '8px', borderRadius: '6px' }}>
+            <Layers size={16} />
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Inputs Today</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{totalInputsToday}</span>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: theme.titleSub }}>Inputs Today</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: theme.titleMain }}>{totalInputsToday}</div>
           </div>
         </div>
 
-        {/* Card 4: Total System Logs */}
-        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: isDarkMode ? '#581c87' : '#f3e8ff', padding: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Building size={22} color={isDarkMode ? '#d8b4fe' : '#9333ea'} />
+        <div style={{ background: theme.statCardBg, border: `1px solid ${theme.statCardBorder}`, borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: isDarkMode ? 'rgba(147, 51, 234, 0.2)' : '#f3e8ff', color: '#9333ea', padding: '8px', borderRadius: '6px' }}>
+            <Building size={16} />
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total System Logs</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: theme.titleMain }}>{totalSystemLogs}</span>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: theme.titleSub }}>Total Logs</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: theme.titleMain }}>{totalSystemLogs}</div>
           </div>
         </div>
-
       </div>
 
       {/* Top Input & Start Action Bar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px', alignItems: 'stretch' }}>
         <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 0 }}>
           <input 
             type="text"
@@ -398,10 +378,10 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
             disabled={activeSession !== null}
             style={{ 
               width: '100%', 
-              padding: '12px 16px', 
-              borderRadius: '8px', 
+              padding: '8px 12px', 
+              borderRadius: '6px', 
               border: `1px solid ${theme.inputBorder}`, 
-              fontSize: '14px', 
+              fontSize: '12.5px', 
               outline: 'none',
               boxSizing: 'border-box',
               background: activeSession !== null ? theme.inputBgDisabled : theme.inputBg,
@@ -414,231 +394,156 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
           onClick={handleStart}
           disabled={!inputValue.trim() || activeSession !== null}
           style={{ 
-            padding: '12px 24px', 
+            padding: '8px 16px', 
             background: (!inputValue.trim() || activeSession !== null) ? '#94a3b8' : '#2563eb', 
             color: '#fff', 
             border: 'none', 
-            borderRadius: '8px', 
+            borderRadius: '6px', 
             fontWeight: '600', 
-            fontSize: '14px', 
+            fontSize: '12.5px', 
             cursor: (!inputValue.trim() || activeSession !== null) ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            transition: 'background 0.2s',
+            gap: '6px',
             whiteSpace: 'nowrap',
             flexShrink: 0
           }}
         >
-          <Play size={16} /> Start
+          <Play size={14} /> Start Session
         </button>
       </div>
 
       {/* Ongoing Session Live Card */}
       {activeSession && (
-        <div style={{ background: theme.activeBoxBg, border: `1px solid ${theme.activeBoxBorder}`, borderRadius: '12px', padding: '16px 20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ background: theme.activeBoxBg, border: `1px solid ${theme.activeBoxBorder}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div>
-              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Input</span>
-              <span style={{ fontSize: '14px', fontWeight: '700', color: theme.titleMain, wordBreak: 'break-all' }}>{activeSession.input}</span>
+              <span style={{ fontSize: '10px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Input</span>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: theme.titleMain, wordBreak: 'break-all' }}>{activeSession.input}</span>
             </div>
             <div>
-              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Start Time</span>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: theme.tableText }}>{activeSession.startTime}</span>
+              <span style={{ fontSize: '10px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Start Time</span>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: theme.tableText }}>{activeSession.startTime}</span>
             </div>
             <div>
-              <span style={{ fontSize: '11px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Elapsed Timer</span>
-              <span 
-                style={{ 
-                  fontSize: '16px', 
-                  fontWeight: '800', 
-                  color: isDarkMode ? '#93c5fd' : '#2563eb', 
-                  fontFamily: 'monospace',
-                  animation: 'blink 1.5s ease-in-out infinite',
-                }}
-              >
-                <style>
-                  {`
-                    @keyframes blink {
-                      0%, 100% { opacity: 1; }
-                      50% { opacity: 0.3; }
-                    }
-                  `}
-                </style>
-                running...
-              </span>
+              <span style={{ fontSize: '10px', color: theme.titleSub, display: 'block', fontWeight: '700', textTransform: 'uppercase' }}>Timer</span>
+<span 
+  style={{ 
+    fontSize: '16px', 
+    fontWeight: '800', 
+    color: isDarkMode ? '#93c5fd' : '#2563eb', 
+    fontFamily: 'monospace',
+    animation: 'blink 1.5s ease-in-out infinite',
+  }}
+>
+  <style>
+    {`
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+    `}
+  </style>
+  running...
+</span>
             </div>
           </div>
 
           <button 
             onClick={handleStop}
             style={{ 
-              padding: '10px 20px', 
+              padding: '6px 12px', 
               background: '#dc2626', 
               color: '#fff', 
               border: 'none', 
-              borderRadius: '8px', 
+              borderRadius: '6px', 
               fontWeight: '600', 
-              fontSize: '13px', 
+              fontSize: '12px', 
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px'
+              gap: '5px'
             }}
           >
-            <Square size={15} /> Stop & Save
+            <Square size={13} /> Stop & Save
           </button>
         </div>
       )}
 
       {/* History Log Section */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: theme.titleMain, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Clock size={18} color={isDarkMode ? '#93c5fd' : '#2563eb'} /> AHT Activity Log ({name})
-            </h3>
-            {/* Filtered Count Badge */}
-            <span style={{ fontSize: '12px', fontWeight: '600', background: isDarkMode ? '#334155' : '#e2e8f0', color: theme.titleMain, padding: '2px 8px', borderRadius: '12px' }}>
-              Filtered Count: {filteredLogs.length}
-            </span>
+        
+        {/* Streamlined Filter Toolbar */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', background: theme.filterBarBg, padding: '10px', borderRadius: '8px', border: `1px solid ${theme.cardBorder}` }}>
+          
+          <div style={{ position: 'relative', flex: '1 1 140px', minWidth: '130px' }}>
+            <Search size={14} color={theme.titleSub} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input 
+              type="text"
+              placeholder="Search logs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '6px 10px 6px 28px', borderRadius: '6px', border: `1px solid ${theme.inputBorder}`, fontSize: '12px', outline: 'none', boxSizing: 'border-box', background: theme.inputBg, color: theme.inputColor }}
+            />
+            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: theme.titleSub }}><X size={12} /></button>}
           </div>
 
-          {/* Search, Date-Time Range Filter Controls */}
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            
-            {/* Search Input */}
-            <div style={{ position: 'relative', width: '220px', maxWidth: '100%' }}>
-              <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input 
-                type="text"
-                placeholder="Search logs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ 
-                  padding: '8px 12px 8px 32px', 
-                  borderRadius: '6px', 
-                  border: `1px solid ${theme.inputBorder}`, 
-                  fontSize: '13px', 
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  background: theme.inputBg,
-                  color: theme.inputColor
-                }}
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')} 
-                  style={{ background: 'none', border: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: theme.titleSub }}
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', background: theme.inputBg, border: `1px solid ${theme.inputBorder}`, borderRadius: '6px', padding: '4px 8px', gap: '6px' }}>
+            <Calendar size={14} color={theme.titleSub} />
+            <input type="datetime-local" title="From Date & Time" value={filterFromDateTime} onChange={(e) => setFilterFromDateTime(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', color: filterFromDateTime ? theme.titleMain : theme.titleSub, fontSize: '12px' }} />
+            {filterFromDateTime && <button onClick={() => setFilterFromDateTime('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color={theme.titleSub} /></button>}
+          </div>
 
-            {/* From Date & Time Filter */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
-              <input 
-                type="datetime-local"
-                title="From Date & Time"
-                value={filterFromDateTime}
-                onChange={(e) => setFilterFromDateTime(e.target.value)}
-                style={{ 
-                  padding: '7px 12px 7px 32px', 
-                  borderRadius: '6px', 
-                  border: `1px solid ${theme.inputBorder}`, 
-                  fontSize: '13px', 
-                  outline: 'none',
-                  color: filterFromDateTime ? theme.titleMain : theme.titleSub,
-                  background: theme.inputBg,
-                  boxSizing: 'border-box'
-                }}
-              />
-              {filterFromDateTime && (
-                <button 
-                  onClick={() => setFilterFromDateTime('')}
-                  title="Clear From Date & Time"
-                  style={{ marginLeft: '6px', background: theme.inputBgDisabled, border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
-                >
-                  <X size={13} color={theme.titleSub} />
-                </button>
-              )}
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', background: theme.inputBg, border: `1px solid ${theme.inputBorder}`, borderRadius: '6px', padding: '4px 8px', gap: '6px' }}>
+            <Calendar size={14} color={theme.titleSub} />
+            <input type="datetime-local" title="To Date & Time" value={filterToDateTime} onChange={(e) => setFilterToDateTime(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', color: filterToDateTime ? theme.titleMain : theme.titleSub, fontSize: '12px' }} />
+            {filterToDateTime && <button onClick={() => setFilterToDateTime('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color={theme.titleSub} /></button>}
+          </div>
 
-            {/* To Date & Time Filter */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Calendar size={15} color="#94a3b8" style={{ position: 'absolute', left: '10px', pointerEvents: 'none' }} />
-              <input 
-                type="datetime-local"
-                title="To Date & Time"
-                value={filterToDateTime}
-                onChange={(e) => setFilterToDateTime(e.target.value)}
-                style={{ 
-                  padding: '7px 12px 7px 32px', 
-      borderRadius: '6px', 
-                  border: `1px solid ${theme.inputBorder}`, 
-                  fontSize: '13px', 
-                  outline: 'none',
-                  color: filterToDateTime ? theme.titleMain : theme.titleSub,
-                  background: theme.inputBg,
-                  boxSizing: 'border-box'
-                }}
-              />
-              {filterToDateTime && (
-                <button 
-                  onClick={() => setFilterToDateTime('')}
-                  title="Clear To Date & Time"
-                  style={{ marginLeft: '6px', background: theme.inputBgDisabled, border: `1px solid ${theme.inputBorder}`, borderRadius: '4px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}
-                >
-                  <X size={13} color={theme.titleSub} />
-                </button>
-              )}
-            </div>
-
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '11.5px', color: theme.titleSub, fontWeight: '600' }}>Filtered: {filteredLogs.length} / {logs.length}</span>
           </div>
         </div>
 
-        {/* Scrollable Table Container */}
-        <div style={{ maxHeight: '420px', overflowY: 'auto', overflowX: 'auto', border: `1px solid ${theme.tableBorder}`, borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '850px' }}>
+        {/* High-Density Scrollable Table Container */}
+        <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'auto', border: `1px solid ${theme.tableBorder}`, borderRadius: '6px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '800px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: theme.tableHeaderBg }}>
               <tr style={{ borderBottom: `1px solid ${theme.tableBorder}`, color: theme.titleSub }}>
-                {columnVisibility.no && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>No.</th>}
-                {columnVisibility.eid && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>EID</th>}
-                {columnVisibility.name && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Name</th>}
-                {columnVisibility.department && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Department</th>}
-                {columnVisibility.cluster && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Cluster</th>}
-                {columnVisibility.input && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>}
-                {columnVisibility.startTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>}
-                {columnVisibility.endTime && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>}
-                {columnVisibility.createdAt && <th style={{ padding: '12px 16px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>}
+                {columnVisibility.no && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>No.</th>}
+                {columnVisibility.eid && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>EID</th>}
+                {columnVisibility.name && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Name</th>}
+                {columnVisibility.department && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Department</th>}
+                {columnVisibility.cluster && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Cluster</th>}
+                {columnVisibility.input && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Input</th>}
+                {columnVisibility.startTime && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Start Time</th>}
+                {columnVisibility.endTime && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>End Time</th>}
+                {columnVisibility.createdAt && <th style={{ padding: '8px 10px', fontWeight: '700', background: theme.tableHeaderBg }}>Created At</th>}
               </tr>
             </thead>
             <tbody>
               {paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumnCount || 10} style={{ textAlign: 'center', padding: '40px', color: theme.titleSub }}>
+                  <td colSpan={visibleColumnCount || 9} style={{ textAlign: 'center', padding: '30px', color: theme.titleSub }}>
                     {logs.length === 0 
-                      ? 'No completed sessions logged yet for your account. Start a tracking session above.' 
+                      ? 'No completed sessions logged yet. Start a tracking session above.' 
                       : 'No logs match your search or filter criteria.'}
                   </td>
                 </tr>
               ) : (
                 paginatedLogs.map((log, index) => (
                   <tr key={index} style={{ borderBottom: `1px solid ${theme.tableRowBorder}` }}>
-                    {columnVisibility.no && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.number}</td>}
-                    {columnVisibility.eid && <td style={{ padding: '12px 16px', color: theme.tableText, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>}
-                    {columnVisibility.name && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.name, searchQuery)}</td>}
-                    {columnVisibility.department && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.department, searchQuery)}</td>}
-                    {columnVisibility.cluster && <td style={{ padding: '12px 16px', color: theme.tableText }}>{highlightText(log.cluster, searchQuery)}</td>}
-                    {columnVisibility.input && <td style={{ padding: '12px 16px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>}
-                    {columnVisibility.startTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.start_time}</td>}
-                    {columnVisibility.endTime && <td style={{ padding: '12px 16px', color: theme.tableText }}>{log.end_time}</td>}
-                    {columnVisibility.createdAt && <td style={{ padding: '12px 16px', color: theme.titleSub, fontSize: '12px' }}>{log.created_at}</td>}
+                    {columnVisibility.no && <td style={{ padding: '8px 10px', color: theme.tableText }}>{log.number}</td>}
+                    {columnVisibility.eid && <td style={{ padding: '8px 10px', color: theme.tableText, fontWeight: '600' }}>{highlightText(log.eid, searchQuery)}</td>}
+                    {columnVisibility.name && <td style={{ padding: '8px 10px', color: theme.tableText }}>{highlightText(log.name, searchQuery)}</td>}
+                    {columnVisibility.department && <td style={{ padding: '8px 10px', color: theme.tableText }}>{highlightText(log.department, searchQuery)}</td>}
+                    {columnVisibility.cluster && <td style={{ padding: '8px 10px', color: theme.tableText }}>{highlightText(log.cluster, searchQuery)}</td>}
+                    {columnVisibility.input && <td style={{ padding: '8px 10px', color: theme.titleMain, fontWeight: '500' }}>{highlightText(log.input, searchQuery)}</td>}
+                    {columnVisibility.startTime && <td style={{ padding: '8px 10px', color: theme.tableText }}>{log.start_time}</td>}
+                    {columnVisibility.endTime && <td style={{ padding: '8px 10px', color: theme.tableText }}>{log.end_time}</td>}
+                    {columnVisibility.createdAt && <td style={{ padding: '8px 10px', color: theme.titleSub, fontSize: '11px' }}>{log.created_at}</td>}
                   </tr>
                 ))
               )}
@@ -646,20 +551,17 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
           </table>
         </div>
 
-        {/* Pagination and Range Selector Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: theme.titleSub }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span>Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries</span>
-            {filteredLogs.length !== logs.length && <span>(filtered from {logs.length} total)</span>}
-          </div>
+        {/* Compact Pagination and Range Selector Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap', gap: '10px', fontSize: '12px', color: theme.titleSub }}>
+          <div>Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries</div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span>Rows:</span>
               <select 
                 value={itemsPerPage} 
                 onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${theme.inputBorder}`, outline: 'none', background: theme.inputBg, color: theme.inputColor, fontSize: '13px' }}
+                style={{ padding: '4px 8px', borderRadius: '4px', border: `1px solid ${theme.inputBorder}`, outline: 'none', background: theme.inputBg, color: theme.inputColor, fontSize: '12px' }}
               >
                 <option value={10}>10</option>
                 <option value={15}>15</option>
@@ -668,23 +570,23 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button 
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 style={{ 
-                  padding: '6px 10px', 
-                  borderRadius: '6px', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px', 
                   border: `1px solid ${theme.inputBorder}`, 
-                  background: currentPage === 1 ? theme.paginationDisabledBg : theme.paginationBg, 
-                  color: currentPage === 1 ? theme.paginationDisabledColor : theme.tableText, 
+                  background: currentPage === 1 ? theme.paginationDisabledBg : theme.inputBg, 
+                  color: currentPage === 1 ? theme.paginationDisabledColor : theme.titleMain, 
                   cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
+                  alignItems: 'center'
                 }}
               >
-                <ChevronLeft size={15} /> Prev
+                <ChevronLeft size={14} /> Prev
               </button>
 
               <span style={{ fontWeight: '600', color: theme.titleMain }}>
@@ -695,18 +597,18 @@ export default function AHTMonitoringEmployee({ currentUser, isDarkMode }) {
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 style={{ 
-                  padding: '6px 10px', 
-                  borderRadius: '6px', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px', 
                   border: `1px solid ${theme.inputBorder}`, 
-                  background: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledBg : theme.paginationBg, 
-                  color: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledColor : theme.tableText, 
+                  background: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledBg : theme.inputBg, 
+                  color: (currentPage === totalPages || totalPages === 0) ? theme.paginationDisabledColor : theme.titleMain, 
                   cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
+                  alignItems: 'center'
                 }}
               >
-                Next <ChevronRight size={15} />
+                Next <ChevronRight size={14} />
               </button>
             </div>
           </div>
