@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+// ManageUser.jsx
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter, AlertTriangle } from 'lucide-react';
+import { Users, Trash2, Edit3, Loader2, Shield, User, X, CheckCircle2, AlertCircle, Filter, AlertTriangle, MoreVertical } from 'lucide-react';
 
 export default function ManageUser({ isDarkMode }) {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,10 @@ export default function ManageUser({ isDarkMode }) {
   const [selectedDepartment, setSelectedDepartment] = useState('ALL');
   const [selectedCluster, setSelectedCluster] = useState('ALL');
   
+  // Actions Menu Popover State
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const menuRef = useRef(null);
+
   // Delete Modal States
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -22,6 +27,7 @@ export default function ManageUser({ isDarkMode }) {
   const [editRole, setEditRole] = useState('employee');
   const [editDepartment, setEditDepartment] = useState('');
   const [editCluster, setEditCluster] = useState('');
+  const [editIsActive, setEditIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -41,6 +47,15 @@ export default function ManageUser({ isDarkMode }) {
 
   useEffect(() => {
     fetchUsers();
+
+    // Close actions menu when clicking outside
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const confirmDelete = async () => {
@@ -69,8 +84,10 @@ export default function ManageUser({ isDarkMode }) {
     setEditRole(user.role || 'employee');
     setEditDepartment(user.department || '');
     setEditCluster(user.cluster || '');
+    setEditIsActive(user.is_active ?? true);
     setSuccessMessage('');
     setErrorMessage('');
+    setActiveMenuId(null);
   };
 
   const handleUpdateUser = async (e) => {
@@ -88,7 +105,8 @@ export default function ManageUser({ isDarkMode }) {
           password: editPassword.trim(),
           role: editRole,
           department: editDepartment.trim(),
-          cluster: editCluster.trim()
+          cluster: editCluster.trim(),
+          is_active: editIsActive
         })
         .eq('id', editingUser.id);
 
@@ -146,18 +164,16 @@ export default function ManageUser({ isDarkMode }) {
     iconBg: isDarkMode ? '#1e3a8a' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
     iconColor: isDarkMode ? '#93c5fd' : '#2563eb',
     rowHover: isDarkMode ? '#334155' : '#f8fafc',
+    inactiveRowBg: isDarkMode ? 'rgba(51, 65, 85, 0.35)' : '#f1f5f9',
+    inactiveText: isDarkMode ? '#64748b' : '#94a3b8',
     adminBadgeBg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(37, 99, 235, 0.08)',
     adminBadgeBorder: isDarkMode ? 'rgba(59, 130, 246, 0.4)' : 'rgba(37, 99, 235, 0.15)',
     adminBadgeText: isDarkMode ? '#93c5fd' : '#2563eb',
     employeeBadgeBg: isDarkMode ? '#334155' : 'rgba(241, 245, 249, 1)',
     employeeBadgeBorder: isDarkMode ? '#475569' : '#e2e8f0',
     employeeBadgeText: isDarkMode ? '#cbd5e1' : '#64748b',
-    editBtnBg: isDarkMode ? '#1e3a8a' : '#eff6ff',
-    editBtnBorder: isDarkMode ? '#1d4ed8' : '#bfdbfe',
-    editBtnText: isDarkMode ? '#93c5fd' : '#2563eb',
-    deleteBtnBg: isDarkMode ? '#7f1d1d' : '#fef2f2',
-    deleteBtnBorder: isDarkMode ? '#991b1b' : '#fecaca',
-    deleteBtnText: isDarkMode ? '#fca5a5' : '#dc2626',
+    menuDropdownBg: isDarkMode ? '#0f172a' : '#ffffff',
+    menuHover: isDarkMode ? '#334155' : '#f8fafc',
     resetBtnBg: isDarkMode ? '#334155' : '#e2e8f0',
     resetBtnText: isDarkMode ? '#f8fafc' : '#334155',
     modalOverlay: isDarkMode ? 'rgba(2, 6, 23, 0.75)' : 'rgba(15, 23, 42, 0.5)',
@@ -175,7 +191,7 @@ export default function ManageUser({ isDarkMode }) {
     <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       <div style={{ background: theme.cardBg, borderRadius: '12px', border: `1px solid ${theme.border}`, overflow: 'hidden', boxShadow: isDarkMode ? 'none' : '0 4px 12px -2px rgba(15, 23, 42, 0.03)' }}>
         
-        {/* Header - Compact Space */}
+        {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '36px', height: '36px', background: theme.iconBg, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.iconColor }}>
@@ -185,12 +201,12 @@ export default function ManageUser({ isDarkMode }) {
               <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: theme.textMain, letterSpacing: '-0.01em' }}>
                 Manage Users <span style={{ fontSize: '13px', fontWeight: '500', color: theme.textMuted }}>({filteredUsers.length}/{users.length})</span>
               </h2>
-              <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>View and maintain all active workspace user accounts</p>
+              <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>View and maintain all workspace user accounts</p>
             </div>
           </div>
         </div>
 
-        {/* Filter Controls Bar - Dense Row layout */}
+        {/* Filter Controls Bar */}
         <div style={{ background: theme.filterBarBg, padding: '10px 20px', borderBottom: `1px solid ${theme.border}`, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: theme.textSub, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             <Filter size={14} color={theme.iconColor} />
@@ -257,63 +273,156 @@ export default function ManageUser({ isDarkMode }) {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u, index) => (
-                  <tr key={u.id} style={{ borderBottom: `1px solid ${theme.tableBorder}`, transition: 'background 0.15s ease' }} onMouseEnter={(e) => e.currentTarget.style.background = theme.rowHover} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: '600', color: theme.textMuted, fontSize: '12px' }}>
-                      {index + 1}
-                    </td>
-                    <td style={{ padding: '10px 16px', fontWeight: '600', color: theme.textMain }}>
-                      {u.employee_name || 'N/A'}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: theme.textMuted, fontFamily: 'monospace', fontWeight: '600', fontSize: '12px' }}>
-                      {u.eid}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: theme.textSub, fontWeight: '500' }}>
-                      {u.department || '—'}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: theme.textSub, fontWeight: '500' }}>
-                      {u.cluster || '—'}
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '4px', 
-                        padding: '3px 8px', 
-                        borderRadius: '12px', 
-                        fontSize: '10px', 
-                        fontWeight: '700',
-                        background: u.role === 'admin' ? theme.adminBadgeBg : theme.employeeBadgeBg,
-                        color: u.role === 'admin' ? theme.adminBadgeText : theme.employeeBadgeText,
-                        border: u.role === 'admin' ? `1px solid ${theme.adminBadgeBorder}` : `1px solid ${theme.employeeBadgeBorder}`
-                      }}>
-                        {u.role === 'admin' ? <Shield size={10} /> : <User size={10} />}
-                        <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 16px', color: theme.textMuted, fontSize: '12px', fontWeight: '500' }}>
-                      {formatDate(u.created_at)}
-                    </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                        <button 
-                          onClick={() => handleOpenEdit(u)}
-                          style={{ background: theme.editBtnBg, border: `1px solid ${theme.editBtnBorder}`, color: theme.editBtnText, padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}
+                filteredUsers.map((u, index) => {
+                  const isInactive = u.is_active === false;
+                  return (
+                    <tr 
+                      key={u.id} 
+                      style={{ 
+                        borderBottom: `1px solid ${theme.tableBorder}`, 
+                        background: isInactive ? theme.inactiveRowBg : 'transparent',
+                        opacity: isInactive ? 0.75 : 1,
+                        transition: 'background 0.15s ease' 
+                      }} 
+                      onMouseEnter={(e) => { if (!isInactive) e.currentTarget.style.background = theme.rowHover; }} 
+                      onMouseLeave={(e) => { if (!isInactive) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: '600', color: isInactive ? theme.inactiveText : theme.textMuted, fontSize: '12px' }}>
+                        {index + 1}
+                      </td>
+                      <td style={{ padding: '10px 16px', fontWeight: '600', color: isInactive ? theme.inactiveText : theme.textMain }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{u.employee_name || 'N/A'}</span>
+                          {isInactive && (
+                            <span style={{ fontSize: '9px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', background: isDarkMode ? '#334155' : '#e2e8f0', color: theme.inactiveText, textTransform: 'uppercase' }}>
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 16px', color: isInactive ? theme.inactiveText : theme.textMuted, fontFamily: 'monospace', fontWeight: '600', fontSize: '12px' }}>
+                        {u.eid}
+                      </td>
+                      <td style={{ padding: '10px 16px', color: isInactive ? theme.inactiveText : theme.textSub, fontWeight: '500' }}>
+                        {u.department || '—'}
+                      </td>
+                      <td style={{ padding: '10px 16px', color: isInactive ? theme.inactiveText : theme.textSub, fontWeight: '500' }}>
+                        {u.cluster || '—'}
+                      </td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '4px', 
+                          padding: '3px 8px', 
+                          borderRadius: '12px', 
+                          fontSize: '10px', 
+                          fontWeight: '700',
+                          background: isInactive ? (isDarkMode ? '#1e293b' : '#e2e8f0') : (u.role === 'admin' ? theme.adminBadgeBg : theme.employeeBadgeBg),
+                          color: isInactive ? theme.inactiveText : (u.role === 'admin' ? theme.adminBadgeText : theme.employeeBadgeText),
+                          border: `1px solid ${isInactive ? theme.border : (u.role === 'admin' ? theme.adminBadgeBorder : theme.employeeBadgeBorder)}`
+                        }}>
+                          {u.role === 'admin' ? <Shield size={10} /> : <User size={10} />}
+                          <span style={{ textTransform: 'uppercase' }}>{u.role}</span>
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 16px', color: isInactive ? theme.inactiveText : theme.textMuted, fontSize: '12px', fontWeight: '500' }}>
+                        {formatDate(u.created_at)}
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', position: 'relative' }}>
+                        {/* 3-Dots Action Button */}
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenuId(activeMenuId === u.id ? null : u.id)}
+                          style={{
+                            background: activeMenuId === u.id ? theme.filterBarBg : 'transparent',
+                            border: `1px solid ${activeMenuId === u.id ? theme.border : 'transparent'}`,
+                            borderRadius: '6px',
+                            padding: '6px',
+                            cursor: 'pointer',
+                            color: isInactive ? theme.inactiveText : theme.textMuted,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}
                         >
-                          <Edit3 size={12} />
-                          <span>Edit</span>
+                          <MoreVertical size={16} />
                         </button>
-                        <button 
-                          onClick={() => setUserToDelete(u)}
-                          style={{ background: theme.deleteBtnBg, border: `1px solid ${theme.deleteBtnBorder}`, color: theme.deleteBtnText, padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}
-                        >
-                          <Trash2 size={12} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+
+                        {/* Dropdown Menu */}
+                        {activeMenuId === u.id && (
+                          <div 
+                            ref={menuRef}
+                            style={{
+                              position: 'absolute',
+                              right: '16px',
+                              top: '42px',
+                              width: '130px',
+                              background: theme.menuDropdownBg,
+                              border: `1px solid ${theme.border}`,
+                              borderRadius: '8px',
+                              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                              zIndex: 10,
+                              overflow: 'hidden',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(u)}
+                              style={{
+                                width: '100%',
+                                padding: '9px 12px',
+                                background: 'transparent',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: theme.textMain,
+                                cursor: 'pointer',
+                                borderBottom: `1px solid ${theme.tableBorder}`
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = theme.menuHover}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                              <Edit3 size={13} color={theme.iconColor} />
+                              <span>Edit</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserToDelete(u);
+                                setActiveMenuId(null);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '9px 12px',
+                                background: 'transparent',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#dc2626',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = isDarkMode ? 'rgba(127, 29, 29, 0.2)' : '#fef2f2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                              <Trash2 size={13} color="#dc2626" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -368,7 +477,7 @@ export default function ManageUser({ isDarkMode }) {
                 </div>
                 <div>
                   <h3 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: theme.textMain }}>Edit User Profile</h3>
-                  <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>Modify credentials for {editingUser.employee_name}</p>
+                  <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>Modify credentials & status for {editingUser.employee_name}</p>
                 </div>
               </div>
               <button 
@@ -394,6 +503,22 @@ export default function ManageUser({ isDarkMode }) {
                   <span>{errorMessage}</span>
                 </div>
               )}
+
+              {/* Status Toggle Selector */}
+              <div style={{ background: theme.filterBarBg, padding: '12px 14px', borderRadius: '8px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: theme.textMain }}>Account Status</span>
+                  <span style={{ fontSize: '11px', color: theme.textMuted }}>{editIsActive ? 'Active (Visible & enabled)' : 'Inactive (Grayed out indicator)'}</span>
+                </div>
+                <select
+                  value={editIsActive ? 'active' : 'inactive'}
+                  onChange={(e) => setEditIsActive(e.target.value === 'active')}
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${theme.inputBorder}`, background: theme.inputBg, color: theme.textMain, fontSize: '12px', fontWeight: '700', cursor: 'pointer', outline: 'none' }}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: theme.labelColor, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Employee ID (EID)</label>
